@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/axle/manifest-v0.schema.json",
+  "title": "AXLE Artifact Manifest v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "artifact_id",
+    "producer",
+    "source",
+    "environment",
+    "objects"
+  ],
+  "properties": {
+    "schema": {
+      "const": "axle.artifact.v0"
+    },
+    "artifact_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "language",
+        "source_digest"
+      ],
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "source_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "engine_version",
+        "lean_version",
+        "mathlib_digest",
+        "environment_digest"
+      ],
+      "properties": {
+        "engine": {
+          "type": "string"
+        },
+        "engine_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lean_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mathlib_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "environment_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "objects": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "declarations",
+        "diagnostics",
+        "hashes"
+      ],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "declarations": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "type": "string"
+        },
+        "hashes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
+

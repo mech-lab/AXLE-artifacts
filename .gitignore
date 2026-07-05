@@ -1,25 +1,15 @@
-# Python
+target/
 __pycache__/
 *.py[cod]
 build/
 dist/
 *.egg-info/
-
-# Virtual environments
 .venv/
 .env
-
-# Tools
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
-
-# Docs
 site/
-
-# IDE
 .idea/
 .vscode/
-
-# OS
 .DS_Store
