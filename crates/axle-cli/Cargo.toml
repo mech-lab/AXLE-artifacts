@@ -1,0 +1,15 @@
+[package]
+name = "axle-rs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+axle-artifact = { path = "../axle-artifact" }
+axle-core = { path = "../axle-core" }
+axle-receipts = { path = "../axle-receipts" }
+clap.workspace = true
+serde_json.workspace = true
+

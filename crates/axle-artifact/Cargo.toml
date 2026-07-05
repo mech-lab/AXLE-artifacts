@@ -1,0 +1,17 @@
+[package]
+name = "axle-artifact"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+axle-core = { path = "../axle-core" }
+axle-hash = { path = "../axle-hash" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+

@@ -1,0 +1,11 @@
+[package]
+name = "axle-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+axle-hash = { path = "../axle-hash" }
+serde.workspace = true
+

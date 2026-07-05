@@ -1,0 +1,25 @@
+{
+  "schema": "axle.artifact.v0",
+  "artifact_id": "sha256:26832ad14181b21da5fdb149a1060db5d51d7567f2b809e4d1a8eaab2ec14892",
+  "producer": {
+    "name": "axle-rs",
+    "version": "0.1.0"
+  },
+  "source": {
+    "language": "lean4",
+    "source_digest": "sha256:fde4ae06fb900d0eaa5a154b3272b414ea3fa5a9dbf059ea272fbe8f41b6df60"
+  },
+  "environment": {
+    "engine": "axiom-lean-engine",
+    "engine_version": null,
+    "lean_version": null,
+    "mathlib_digest": null,
+    "environment_digest": "sha256:b7f3ce326d2ba54949b9931ebd9526535c85e65a4a2fe6689246c8bd46c40136"
+  },
+  "objects": {
+    "source": "source.json",
+    "declarations": "declarations.json",
+    "diagnostics": "diagnostics.json",
+    "hashes": "hashes.json"
+  }
+}
