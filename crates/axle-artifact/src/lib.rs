@@ -45,6 +45,7 @@ impl ArtifactDirectoryExt for AxleArtifact {
             .with_context(|| format!("failed to read {}", manifest.objects.diagnostics))?;
         let hashes: HashesFile = read_json(path.join(&manifest.objects.hashes))
             .with_context(|| format!("failed to read {}", manifest.objects.hashes))?;
+        let adapter = read_optional_json(path, manifest.objects.adapter.as_deref())?;
 
         Ok(Self {
             manifest,
@@ -52,6 +53,7 @@ impl ArtifactDirectoryExt for AxleArtifact {
             declarations,
             diagnostics,
             hashes,
+            adapter,
         })
     }
 
@@ -78,6 +80,12 @@ impl ArtifactDirectoryExt for AxleArtifact {
             path.join(&normalized.manifest.objects.hashes),
             &normalized.hashes,
         )?;
+        if let (Some(adapter_path), Some(adapter)) = (
+            normalized.manifest.objects.adapter.as_deref(),
+            normalized.adapter.as_ref(),
+        ) {
+            write_json(path.join(adapter_path), adapter)?;
+        }
 
         Ok(())
     }
@@ -163,7 +171,8 @@ pub fn new_artifact() -> AxleArtifact {
 fn normalize_artifact(artifact: &AxleArtifact) -> Result<AxleArtifact> {
     let mut normalized = artifact.clone();
     normalized.manifest.schema = ARTIFACT_SCHEMA_V0.to_owned();
-    normalized.manifest.objects = normalized_object_paths(&normalized.manifest.objects);
+    normalized.manifest.objects =
+        normalized_object_paths(&normalized.manifest.objects, normalized.adapter.is_some());
     normalized.manifest.source = SourceSummary {
         language: normalized.source.language.clone(),
         source_digest: None,
@@ -182,9 +191,13 @@ fn normalize_artifact(artifact: &AxleArtifact) -> Result<AxleArtifact> {
         diagnostics: Some(diagnostics_digest),
         environment: Some(environment_digest),
     };
-    normalized.manifest.artifact_id = None;
 
-    let artifact_id = Digest::from_canonical_json(&normalized)?;
+    let mut hashed = normalized.clone();
+    hashed.adapter = None;
+    hashed.manifest.objects.adapter = None;
+    hashed.manifest.artifact_id = None;
+
+    let artifact_id = Digest::from_canonical_json(&hashed)?;
     normalized.manifest.artifact_id = Some(artifact_id);
 
     Ok(normalized)
@@ -196,14 +209,24 @@ fn digest_environment(environment: &Environment) -> Result<Digest> {
     Ok(Digest::from_canonical_json(&normalized)?)
 }
 
-fn normalized_object_paths(paths: &ObjectPaths) -> ObjectPaths {
-    let defaults = ObjectPaths::default();
-
+fn normalized_object_paths(paths: &ObjectPaths, has_adapter: bool) -> ObjectPaths {
     ObjectPaths {
-        source: non_empty_or_default(&paths.source, defaults.source),
-        declarations: non_empty_or_default(&paths.declarations, defaults.declarations),
-        diagnostics: non_empty_or_default(&paths.diagnostics, defaults.diagnostics),
-        hashes: non_empty_or_default(&paths.hashes, defaults.hashes),
+        source: non_empty_or_default(&paths.source, axle_core::DEFAULT_SOURCE_FILE.to_owned()),
+        declarations: non_empty_or_default(
+            &paths.declarations,
+            axle_core::DEFAULT_DECLARATIONS_FILE.to_owned(),
+        ),
+        diagnostics: non_empty_or_default(
+            &paths.diagnostics,
+            axle_core::DEFAULT_DIAGNOSTICS_FILE.to_owned(),
+        ),
+        hashes: non_empty_or_default(&paths.hashes, axle_core::DEFAULT_HASHES_FILE.to_owned()),
+        adapter: has_adapter.then(|| {
+            non_empty_or_default(
+                paths.adapter.as_deref().unwrap_or_default(),
+                axle_core::DEFAULT_ADAPTER_FILE.to_owned(),
+            )
+        }),
     }
 }
 
@@ -248,6 +271,22 @@ where
         .with_context(|| format!("failed to parse JSON {}", path.display()))?)
 }
 
+fn read_optional_json<T>(base: &Path, relative_path: Option<&str>) -> Result<Option<T>>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let Some(relative_path) = relative_path.map(str::trim).filter(|path| !path.is_empty()) else {
+        return Ok(None);
+    };
+
+    let full_path = base.join(relative_path);
+    if !full_path.exists() {
+        return Ok(None);
+    }
+
+    read_json(full_path).map(Some)
+}
+
 fn write_json<T, P>(path: P, value: &T) -> Result<()>
 where
     T: serde::Serialize,
@@ -273,8 +312,10 @@ pub fn verify_dir<P: AsRef<Path>>(path: P) -> Result<IntegrityReport> {
 #[cfg(test)]
 mod tests {
     use super::{ArtifactDirectoryExt, new_artifact};
-    use axle_core::{Declaration, DeclarationKind, VerificationStatus};
+    use axle_core::{AdapterMetadata, Declaration, DeclarationKind, VerificationStatus};
     use axle_hash::Digest;
+    use serde_json::json;
+    use std::fs;
     use tempfile::tempdir;
 
     #[test]
@@ -290,7 +331,7 @@ mod tests {
             name: "Example.foo".to_owned(),
             kind: DeclarationKind::Theorem,
             statement_digest: Some(Digest::sha256("True")),
-            proof_digest: Some(Digest::sha256("trivial")),
+            body_digest: Some(Digest::sha256("trivial")),
             dependencies: Vec::new(),
             verification_status: VerificationStatus::Verified,
         });
@@ -311,12 +352,64 @@ mod tests {
             name: "Example.foo".to_owned(),
             kind: DeclarationKind::Theorem,
             statement_digest: Some(Digest::sha256("A")),
-            proof_digest: Some(Digest::sha256("B")),
+            body_digest: Some(Digest::sha256("B")),
             dependencies: Vec::new(),
             verification_status: VerificationStatus::Verified,
         });
 
         let second = artifact.artifact_digest().unwrap();
         assert_ne!(first, second);
+    }
+
+    #[test]
+    fn adapter_metadata_does_not_change_artifact_digest() {
+        let mut artifact = new_artifact();
+        artifact.adapter = Some(AdapterMetadata::new(
+            json!({
+                "timings": { "total_ms": 10 }
+            }),
+            json!({
+                "timings": { "total_ms": 20 }
+            }),
+        ));
+
+        let first = artifact.artifact_digest().unwrap();
+
+        artifact.adapter = Some(AdapterMetadata::new(
+            json!({
+                "timings": { "total_ms": 999 }
+            }),
+            json!({
+                "timings": { "total_ms": 1000 }
+            }),
+        ));
+
+        let second = artifact.artifact_digest().unwrap();
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn missing_adapter_file_does_not_break_core_verification() {
+        let temp = tempdir().unwrap();
+        let artifact_path = temp.path().join("example.axle");
+
+        let mut artifact = new_artifact();
+        artifact.adapter = Some(AdapterMetadata::new(
+            json!({
+                "okay": true
+            }),
+            json!({
+                "documents": {}
+            }),
+        ));
+        artifact.save_dir(&artifact_path).unwrap();
+
+        fs::remove_file(artifact_path.join("adapter.json")).unwrap();
+
+        let loaded = axle_core::AxleArtifact::load_dir(&artifact_path).unwrap();
+        assert!(loaded.adapter.is_none());
+
+        let report = loaded.verify_integrity().unwrap();
+        assert!(report.is_valid(), "{:?}", report.errors);
     }
 }

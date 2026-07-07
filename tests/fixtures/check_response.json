@@ -1,0 +1,25 @@
+{
+  "okay": true,
+  "content": "import Mathlib\n\ndef sample.foo : Nat := 1\n\ntheorem sample.bar : sample.foo = 1 := rfl\n\ninstance sample.instNat : Inhabited Nat where\n  default := sample.foo\n\nexample : sample.foo = sample.foo := by\n  sorry\n",
+  "lean_messages": {
+    "errors": [],
+    "warnings": [],
+    "infos": []
+  },
+  "tool_messages": {
+    "errors": [],
+    "warnings": [
+      "Declaration 'sample.example_fail' is incomplete (uses 'sorry' or has errors)"
+    ],
+    "infos": []
+  },
+  "failed_declarations": [
+    "sample.example_fail"
+  ],
+  "timings": {
+    "parse_ms": 30,
+    "total_ms": 62
+  },
+  "info": null
+}
+

@@ -8,4 +8,4 @@ rust-version.workspace = true
 [dependencies]
 axle-hash = { path = "../axle-hash" }
 serde.workspace = true
-
+serde_json.workspace = true

@@ -1,0 +1,161 @@
+{
+  "content": "import Mathlib\n\ndef sample.foo : Nat := 1\n\ntheorem sample.bar : sample.foo = 1 := rfl\n\ninstance sample.instNat : Inhabited Nat where\n  default := sample.foo\n\nexample : sample.foo = sample.foo := by\n  sorry\n",
+  "lean_messages": {
+    "errors": [],
+    "warnings": [],
+    "infos": []
+  },
+  "tool_messages": {
+    "errors": [],
+    "warnings": [],
+    "infos": []
+  },
+  "timings": {
+    "parse_ms": 87,
+    "total_ms": 92
+  },
+  "info": null,
+  "documents": {
+    "sample.foo": {
+      "kind": "def",
+      "declaration": "def sample.foo : Nat := 1",
+      "content": "import Mathlib\n\ndef sample.foo : Nat := 1",
+      "tokens": ["def", "sample.foo", ":", "Nat", ":=", "1"],
+      "signature": "def sample.foo : Nat",
+      "type": "Nat",
+      "type_hash": 421340980,
+      "type_depth": 1,
+      "term_depth": 3,
+      "is_sorry": false,
+      "index": 0,
+      "line_pos": 3,
+      "end_line_pos": 3,
+      "proof_length": 1,
+      "tactic_counts": {},
+      "wall_ms": 1,
+      "heartbeats": 3,
+      "local_type_dependencies": [],
+      "local_value_dependencies": [],
+      "external_type_dependencies": ["Nat"],
+      "external_value_dependencies": ["Nat", "OfNat.ofNat", "instOfNatNat"],
+      "local_syntactic_dependencies": [],
+      "external_syntactic_dependencies": ["Nat"],
+      "declaration_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      },
+      "theorem_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      }
+    },
+    "sample.bar": {
+      "kind": "theorem",
+      "declaration": "theorem sample.bar : sample.foo = 1 := rfl",
+      "content": "import Mathlib\n\ndef sample.foo : Nat := 1\n\ntheorem sample.bar : sample.foo = 1 := rfl",
+      "tokens": ["theorem", "sample.bar", ":", "sample.foo", "=", "1", ":=", "rfl"],
+      "signature": "theorem sample.bar : sample.foo = 1",
+      "type": "sample.foo = 1",
+      "type_hash": 254164366,
+      "type_depth": 4,
+      "term_depth": 4,
+      "is_sorry": false,
+      "index": 1,
+      "line_pos": 5,
+      "end_line_pos": 5,
+      "proof_length": 1,
+      "tactic_counts": {},
+      "wall_ms": 1,
+      "heartbeats": 5,
+      "local_type_dependencies": ["sample.foo"],
+      "local_value_dependencies": ["sample.foo"],
+      "external_type_dependencies": ["Eq", "Nat", "OfNat.ofNat", "instOfNatNat"],
+      "external_value_dependencies": ["rfl", "Nat"],
+      "local_syntactic_dependencies": ["sample.foo"],
+      "external_syntactic_dependencies": ["rfl"],
+      "declaration_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      },
+      "theorem_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      }
+    },
+    "sample.instNat": {
+      "kind": "instance",
+      "declaration": "instance sample.instNat : Inhabited Nat where\n  default := sample.foo",
+      "content": "import Mathlib\n\ndef sample.foo : Nat := 1\n\ninstance sample.instNat : Inhabited Nat where\n  default := sample.foo",
+      "tokens": ["instance", "sample.instNat", ":", "Inhabited", "Nat", "where", "default", ":=", "sample.foo"],
+      "signature": "instance sample.instNat : Inhabited Nat",
+      "type": "Inhabited Nat",
+      "type_hash": 19823112,
+      "type_depth": 2,
+      "term_depth": 4,
+      "is_sorry": false,
+      "index": 2,
+      "line_pos": 7,
+      "end_line_pos": 8,
+      "proof_length": 1,
+      "tactic_counts": {},
+      "wall_ms": 2,
+      "heartbeats": 7,
+      "local_type_dependencies": [],
+      "local_value_dependencies": ["sample.foo"],
+      "external_type_dependencies": ["Inhabited", "Nat"],
+      "external_value_dependencies": ["Inhabited", "Nat"],
+      "local_syntactic_dependencies": ["sample.foo"],
+      "external_syntactic_dependencies": ["Inhabited", "Nat"],
+      "declaration_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      },
+      "theorem_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      }
+    },
+    "sample.example_fail": {
+      "kind": "example",
+      "declaration": "example : sample.foo = sample.foo := by\n  sorry",
+      "content": "import Mathlib\n\ndef sample.foo : Nat := 1\n\nexample : sample.foo = sample.foo := by\n  sorry",
+      "tokens": ["example", ":", "sample.foo", "=", "sample.foo", ":=", "by", "sorry"],
+      "signature": "example : sample.foo = sample.foo",
+      "type": "sample.foo = sample.foo",
+      "type_hash": 9011123,
+      "type_depth": 4,
+      "term_depth": 4,
+      "is_sorry": true,
+      "index": 3,
+      "line_pos": 10,
+      "end_line_pos": 11,
+      "proof_length": 1,
+      "tactic_counts": {},
+      "wall_ms": 1,
+      "heartbeats": 6,
+      "local_type_dependencies": ["sample.foo"],
+      "local_value_dependencies": ["sample.foo"],
+      "external_type_dependencies": ["Eq", "Nat"],
+      "external_value_dependencies": ["sorryAx", "Nat"],
+      "local_syntactic_dependencies": ["sample.foo"],
+      "external_syntactic_dependencies": [],
+      "declaration_messages": {
+        "errors": [],
+        "warnings": ["declaration contains sorry"],
+        "infos": []
+      },
+      "theorem_messages": {
+        "errors": [],
+        "warnings": [],
+        "infos": []
+      }
+    }
+  }
+}
+

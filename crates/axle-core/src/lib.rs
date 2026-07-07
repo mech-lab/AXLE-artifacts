@@ -1,5 +1,6 @@
 use axle_hash::Digest;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 pub const ARTIFACT_SCHEMA_V0: &str = "axle.artifact.v0";
 pub const DEFAULT_MANIFEST_FILE: &str = "manifest.json";
@@ -7,8 +8,10 @@ pub const DEFAULT_SOURCE_FILE: &str = "source.json";
 pub const DEFAULT_DECLARATIONS_FILE: &str = "declarations.json";
 pub const DEFAULT_DIAGNOSTICS_FILE: &str = "diagnostics.json";
 pub const DEFAULT_HASHES_FILE: &str = "hashes.json";
+pub const DEFAULT_ADAPTER_FILE: &str = "adapter.json";
+pub const ADAPTER_SCHEMA_V0: &str = "axle.adapter.v0";
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AxleArtifact {
     pub manifest: Manifest,
     pub source: SourceInfo,
@@ -18,6 +21,8 @@ pub struct AxleArtifact {
     pub diagnostics: Vec<Diagnostic>,
     #[serde(default)]
     pub hashes: HashesFile,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter: Option<AdapterMetadata>,
 }
 
 impl Default for AxleArtifact {
@@ -58,6 +63,7 @@ impl AxleArtifact {
             declarations: Vec::new(),
             diagnostics: Vec::new(),
             hashes: HashesFile::default(),
+            adapter: None,
         }
     }
 }
@@ -107,6 +113,8 @@ pub struct ObjectPaths {
     pub declarations: String,
     pub diagnostics: String,
     pub hashes: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adapter: Option<String>,
 }
 
 impl Default for ObjectPaths {
@@ -116,17 +124,38 @@ impl Default for ObjectPaths {
             declarations: DEFAULT_DECLARATIONS_FILE.to_owned(),
             diagnostics: DEFAULT_DIAGNOSTICS_FILE.to_owned(),
             hashes: DEFAULT_HASHES_FILE.to_owned(),
+            adapter: None,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
-#[serde(rename_all = "snake_case")]
 pub enum DeclarationKind {
+    #[serde(rename = "theorem")]
     Theorem,
-    Definition,
+    #[serde(rename = "lemma")]
     Lemma,
+    #[serde(rename = "def")]
+    Def,
+    #[serde(rename = "abbrev")]
+    Abbrev,
+    #[serde(rename = "axiom")]
     Axiom,
+    #[serde(rename = "opaque")]
+    Opaque,
+    #[serde(rename = "structure")]
+    Structure,
+    #[serde(rename = "class")]
+    Class,
+    #[serde(rename = "class inductive")]
+    ClassInductive,
+    #[serde(rename = "inductive")]
+    Inductive,
+    #[serde(rename = "instance")]
+    Instance,
+    #[serde(rename = "example")]
+    Example,
+    #[serde(rename = "unknown")]
     Unknown,
 }
 
@@ -144,9 +173,9 @@ pub struct Declaration {
     pub name: String,
     pub kind: DeclarationKind,
     pub statement_digest: Option<Digest>,
-    pub proof_digest: Option<Digest>,
+    pub body_digest: Option<Digest>,
     #[serde(default)]
-    pub dependencies: Vec<Digest>,
+    pub dependencies: Vec<String>,
     pub verification_status: VerificationStatus,
 }
 
@@ -171,4 +200,99 @@ pub struct HashesFile {
     pub declarations: Option<Digest>,
     pub diagnostics: Option<Digest>,
     pub environment: Option<Digest>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AdapterMetadata {
+    pub schema: String,
+    pub check: Value,
+    pub extract_decls: Value,
+}
+
+impl AdapterMetadata {
+    pub fn new(check: Value, extract_decls: Value) -> Self {
+        Self {
+            schema: ADAPTER_SCHEMA_V0.to_owned(),
+            check,
+            extract_decls,
+        }
+    }
+}
+
+impl DeclarationKind {
+    pub fn from_axle_kind(kind: &str) -> Self {
+        match kind {
+            "theorem" => Self::Theorem,
+            "lemma" => Self::Lemma,
+            "def" => Self::Def,
+            "abbrev" => Self::Abbrev,
+            "axiom" => Self::Axiom,
+            "opaque" => Self::Opaque,
+            "structure" => Self::Structure,
+            "class" => Self::Class,
+            "class inductive" => Self::ClassInductive,
+            "inductive" => Self::Inductive,
+            "instance" => Self::Instance,
+            "example" => Self::Example,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DeclarationKind;
+
+    #[test]
+    fn maps_upstream_axle_declaration_kinds() {
+        assert_eq!(
+            DeclarationKind::from_axle_kind("theorem"),
+            DeclarationKind::Theorem
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("lemma"),
+            DeclarationKind::Lemma
+        );
+        assert_eq!(DeclarationKind::from_axle_kind("def"), DeclarationKind::Def);
+        assert_eq!(
+            DeclarationKind::from_axle_kind("abbrev"),
+            DeclarationKind::Abbrev
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("axiom"),
+            DeclarationKind::Axiom
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("opaque"),
+            DeclarationKind::Opaque
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("structure"),
+            DeclarationKind::Structure
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("class"),
+            DeclarationKind::Class
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("class inductive"),
+            DeclarationKind::ClassInductive
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("inductive"),
+            DeclarationKind::Inductive
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("instance"),
+            DeclarationKind::Instance
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("example"),
+            DeclarationKind::Example
+        );
+        assert_eq!(
+            DeclarationKind::from_axle_kind("mystery"),
+            DeclarationKind::Unknown
+        );
+    }
 }

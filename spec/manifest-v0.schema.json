@@ -122,9 +122,11 @@
         },
         "hashes": {
           "type": "string"
+        },
+        "adapter": {
+          "type": "string"
         }
       }
     }
   }
 }
-
