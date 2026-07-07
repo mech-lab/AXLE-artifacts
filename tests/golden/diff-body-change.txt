@@ -1,0 +1,10 @@
+root: changed
+old_root: sha256:db007f23f501b89863dfbc9751e3e762a09c16ad62e5147e56b64a3d3f16348c
+new_root: sha256:aa918a704f1d2c5c192579d4742d35efde65e8d28e7f0769a5e2c428f95fdf75
+source: unchanged
+environment: unchanged
+verification: unchanged
+added_declarations: none
+removed_declarations: none
+changed_declarations: 1
+changed_declaration: Sample.bar [body]

@@ -1,0 +1,20 @@
+{
+  "okay": true,
+  "content": "import Mathlib\n\ndef sample.foo : Nat := 1\n\ntheorem sample.bar : sample.foo = 1 := rfl\n\ninstance sample.instNat : Inhabited Nat where\n  default := sample.foo\n\nexample : sample.foo = sample.foo := by\n  rfl\n",
+  "lean_messages": {
+    "errors": [],
+    "warnings": [],
+    "infos": []
+  },
+  "tool_messages": {
+    "errors": [],
+    "warnings": [],
+    "infos": []
+  },
+  "failed_declarations": [],
+  "timings": {
+    "parse_ms": 21,
+    "total_ms": 57
+  },
+  "info": null
+}

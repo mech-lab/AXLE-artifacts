@@ -337,6 +337,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "axle-graph"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axle-artifact",
+ "axle-core",
+ "axle-hash",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "axle-hash"
 version = "0.1.0"
 dependencies = [
@@ -365,6 +379,8 @@ dependencies = [
  "axle-artifact",
  "axle-client",
  "axle-core",
+ "axle-graph",
+ "axle-hash",
  "axle-receipts",
  "clap",
  "httpmock",

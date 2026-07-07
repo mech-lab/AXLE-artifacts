@@ -1,6 +1,7 @@
 use axle_core::{
     AdapterMetadata, AxleArtifact, Declaration, DeclarationKind, Diagnostic, DiagnosticLevel,
-    SourceInfo, VerificationStatus,
+    SourceInfo, VerificationMode, VerificationResultStatus, VerificationStatus,
+    VerificationSummary,
 };
 use axle_hash::Digest;
 use reqwest::blocking::Client as HttpClient;
@@ -59,6 +60,13 @@ impl AxleClient {
         request: &ExtractDeclsRequest,
     ) -> Result<ParsedResponse<ExtractDeclsResponse>, AxleClientError> {
         self.post("extract_decls", request, request.timeout_seconds)
+    }
+
+    pub fn verify_proof(
+        &self,
+        request: &VerifyProofRequest,
+    ) -> Result<ParsedResponse<VerifyProofResponse>, AxleClientError> {
+        self.post("verify_proof", request, request.timeout_seconds)
     }
 
     fn post<T, R>(
@@ -141,6 +149,23 @@ pub struct ExtractDeclsRequest {
     pub timeout_seconds: Option<f64>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct VerifyProofRequest {
+    pub formal_statement: String,
+    pub content: String,
+    pub environment: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permitted_sorries: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mathlib_options: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_def_eq: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ignore_imports: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_seconds: Option<f64>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Messages {
     #[serde(default)]
@@ -179,6 +204,24 @@ pub struct ExtractDeclsResponse {
     pub tool_messages: Messages,
     #[serde(default)]
     pub documents: BTreeMap<String, Document>,
+    #[serde(default)]
+    pub timings: BTreeMap<String, u64>,
+    #[serde(default)]
+    pub info: Option<Value>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct VerifyProofResponse {
+    #[serde(default)]
+    pub okay: bool,
+    #[serde(default)]
+    pub content: String,
+    #[serde(default)]
+    pub lean_messages: Messages,
+    #[serde(default)]
+    pub tool_messages: Messages,
+    #[serde(default)]
+    pub failed_declarations: Vec<String>,
     #[serde(default)]
     pub timings: BTreeMap<String, u64>,
     #[serde(default)]
@@ -244,38 +287,138 @@ pub struct BuildArtifactContext<'a> {
     pub environment: &'a str,
 }
 
+pub struct VerifyProofArtifactContext<'a> {
+    pub content_path: &'a Path,
+    pub environment: &'a str,
+    pub formal_statement: &'a str,
+}
+
 pub fn artifact_from_responses(
     context: BuildArtifactContext<'_>,
     check: &ParsedResponse<CheckResponse>,
     extract_decls: &ParsedResponse<ExtractDeclsResponse>,
 ) -> Result<AxleArtifact, AxleAdapterError> {
-    if check.value.content != extract_decls.value.content {
-        return Err(AxleAdapterError::ContentMismatch);
-    }
+    let environment = context.environment.to_owned();
+    let check_request = serde_json::to_value(CheckRequest {
+        content: check.value.content.clone(),
+        environment: environment.clone(),
+        mathlib_options: None,
+        ignore_imports: None,
+        timeout_seconds: None,
+    })
+    .expect("serializing synthetic check request should not fail");
+    let extract_request = serde_json::to_value(ExtractDeclsRequest {
+        content: extract_decls.value.content.clone(),
+        environment,
+        ignore_imports: None,
+        timeout_seconds: None,
+    })
+    .expect("serializing synthetic extract request should not fail");
 
+    build_artifact_from_responses(
+        context,
+        &check_request,
+        &extract_request,
+        check,
+        extract_decls,
+    )
+}
+
+pub fn build_artifact_from_responses(
+    context: BuildArtifactContext<'_>,
+    check_request: &Value,
+    extract_decls_request: &Value,
+    check: &ParsedResponse<CheckResponse>,
+    extract_decls: &ParsedResponse<ExtractDeclsResponse>,
+) -> Result<AxleArtifact, AxleAdapterError> {
     let failed_declarations: BTreeSet<_> =
         check.value.failed_declarations.iter().cloned().collect();
-    let mut artifact = AxleArtifact::new_v0();
-    artifact.source = SourceInfo {
-        language: "lean4".to_owned(),
-        module: context
-            .source_path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .map(ToOwned::to_owned),
-        path: Some(context.source_path.display().to_string()),
-        source_text: Some(check.value.content.clone()),
-    };
-    artifact.manifest.environment.lean_version = Some(context.environment.to_owned());
-    artifact.declarations =
-        declarations_from_documents(&extract_decls.value.documents, &failed_declarations)?;
-    artifact.diagnostics = collect_diagnostics(check, extract_decls);
-    artifact.adapter = Some(AdapterMetadata::new(
-        check.raw.clone(),
-        extract_decls.raw.clone(),
-    ));
+    ensure_processed_content_match(
+        "check",
+        &check.value.content,
+        "extract_decls",
+        &extract_decls.value.content,
+    )?;
 
-    Ok(artifact)
+    let mut requests = BTreeMap::new();
+    requests.insert("check".to_owned(), check_request.clone());
+    requests.insert("extract_decls".to_owned(), extract_decls_request.clone());
+
+    let mut responses = BTreeMap::new();
+    responses.insert("check".to_owned(), check.raw.clone());
+    responses.insert("extract_decls".to_owned(), extract_decls.raw.clone());
+
+    artifact_from_documents(
+        context.source_path,
+        context.environment,
+        check.value.content.clone(),
+        &extract_decls.value.documents,
+        &failed_declarations,
+        collect_response_diagnostics(&[
+            ("check.lean", &check.value.lean_messages),
+            ("check.tool", &check.value.tool_messages),
+            ("extract_decls.lean", &extract_decls.value.lean_messages),
+            ("extract_decls.tool", &extract_decls.value.tool_messages),
+        ]),
+        None,
+        Some(AdapterMetadata::build(requests, responses)),
+    )
+}
+
+pub fn verify_proof_artifact_from_responses(
+    context: VerifyProofArtifactContext<'_>,
+    verify_proof_request: &Value,
+    verify_proof: &ParsedResponse<VerifyProofResponse>,
+    extract_decls: &ParsedResponse<ExtractDeclsResponse>,
+) -> Result<AxleArtifact, AxleAdapterError> {
+    let failed_declarations: BTreeSet<_> = verify_proof
+        .value
+        .failed_declarations
+        .iter()
+        .cloned()
+        .collect();
+    ensure_processed_content_match(
+        "verify_proof",
+        &verify_proof.value.content,
+        "extract_decls",
+        &extract_decls.value.content,
+    )?;
+
+    let mut requests = BTreeMap::new();
+    requests.insert("verify_proof".to_owned(), verify_proof_request.clone());
+
+    let mut responses = BTreeMap::new();
+    responses.insert("verify_proof".to_owned(), verify_proof.raw.clone());
+    responses.insert("extract_decls".to_owned(), extract_decls.raw.clone());
+
+    let mut failed_names = verify_proof.value.failed_declarations.clone();
+    failed_names.sort();
+    failed_names.dedup();
+
+    artifact_from_documents(
+        context.content_path,
+        context.environment,
+        verify_proof.value.content.clone(),
+        &extract_decls.value.documents,
+        &failed_declarations,
+        collect_response_diagnostics(&[
+            ("verify_proof.lean", &verify_proof.value.lean_messages),
+            ("verify_proof.tool", &verify_proof.value.tool_messages),
+            ("extract_decls.lean", &extract_decls.value.lean_messages),
+            ("extract_decls.tool", &extract_decls.value.tool_messages),
+        ]),
+        Some(VerificationSummary {
+            mode: VerificationMode::VerifyProof,
+            status: if verify_proof.value.okay {
+                VerificationResultStatus::Pass
+            } else {
+                VerificationResultStatus::Fail
+            },
+            formal_statement_digest: Digest::from_canonical_json(&context.formal_statement)?,
+            failed_declarations: failed_names,
+        }),
+        Some(AdapterMetadata::verify_proof(requests, responses)),
+    )
 }
 
 fn declarations_from_documents(
@@ -308,6 +451,35 @@ fn declarations_from_documents(
         .collect()
 }
 
+fn artifact_from_documents(
+    source_path: &Path,
+    environment: &str,
+    source_text: String,
+    documents: &BTreeMap<String, Document>,
+    failed_declarations: &BTreeSet<String>,
+    diagnostics: Vec<Diagnostic>,
+    verification: Option<VerificationSummary>,
+    adapter: Option<AdapterMetadata>,
+) -> Result<AxleArtifact, AxleAdapterError> {
+    let mut artifact = AxleArtifact::new_v0();
+    artifact.source = SourceInfo {
+        language: "lean4".to_owned(),
+        module: source_path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(ToOwned::to_owned),
+        path: Some(source_path.display().to_string()),
+        source_text: Some(source_text),
+    };
+    artifact.manifest.environment.lean_version = Some(environment.to_owned());
+    artifact.declarations = declarations_from_documents(documents, failed_declarations)?;
+    artifact.diagnostics = diagnostics;
+    artifact.verification = verification;
+    artifact.adapter = adapter;
+
+    Ok(artifact)
+}
+
 fn local_dependencies(document: &Document) -> Vec<String> {
     let mut names = BTreeSet::new();
     names.extend(document.local_type_dependencies.iter().cloned());
@@ -316,24 +488,28 @@ fn local_dependencies(document: &Document) -> Vec<String> {
     names.into_iter().collect()
 }
 
-fn collect_diagnostics(
-    check: &ParsedResponse<CheckResponse>,
-    extract_decls: &ParsedResponse<ExtractDeclsResponse>,
-) -> Vec<Diagnostic> {
+fn collect_response_diagnostics(entries: &[(&str, &Messages)]) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-    push_messages(&mut diagnostics, "check.lean", &check.value.lean_messages);
-    push_messages(&mut diagnostics, "check.tool", &check.value.tool_messages);
-    push_messages(
-        &mut diagnostics,
-        "extract_decls.lean",
-        &extract_decls.value.lean_messages,
-    );
-    push_messages(
-        &mut diagnostics,
-        "extract_decls.tool",
-        &extract_decls.value.tool_messages,
-    );
+    for &(code, messages) in entries {
+        push_messages(&mut diagnostics, code, messages);
+    }
     diagnostics
+}
+
+fn ensure_processed_content_match(
+    left_label: &'static str,
+    left_content: &str,
+    right_label: &'static str,
+    right_content: &str,
+) -> Result<(), AxleAdapterError> {
+    if left_content == right_content {
+        return Ok(());
+    }
+
+    Err(AxleAdapterError::ContentMismatch {
+        left: left_label,
+        right: right_label,
+    })
 }
 
 fn push_messages(diagnostics: &mut Vec<Diagnostic>, code: &str, messages: &Messages) {
@@ -372,20 +548,29 @@ pub enum AxleClientError {
 
 #[derive(Debug, Error)]
 pub enum AxleAdapterError {
-    #[error("processed content mismatch between AXLE check and extract_decls responses")]
-    ContentMismatch,
+    #[error("processed content mismatch between AXLE {left} and {right} responses")]
+    ContentMismatch {
+        left: &'static str,
+        right: &'static str,
+    },
     #[error("failed to digest AXLE declaration content: {0}")]
     Digest(#[from] axle_hash::HashError),
+    #[error("failed to serialize AXLE adapter request payload: {0}")]
+    RequestEncoding(#[from] serde_json::Error),
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        BuildArtifactContext, CheckResponse, ExtractDeclsResponse, ParsedResponse,
-        artifact_from_responses,
+        BuildArtifactContext, CheckRequest, CheckResponse, ExtractDeclsRequest,
+        ExtractDeclsResponse, ParsedResponse, VerifyProofArtifactContext, VerifyProofRequest,
+        VerifyProofResponse, build_artifact_from_responses, verify_proof_artifact_from_responses,
     };
-    use axle_core::DeclarationKind;
-    use serde_json::Value;
+    use axle_core::{
+        DeclarationKind, VerificationMode, VerificationResultStatus, VerificationStatus,
+    };
+    use serde::de::DeserializeOwned;
+    use serde_json::{Value, json};
     use std::path::Path;
 
     fn fixture(name: &str) -> String {
@@ -395,6 +580,16 @@ mod tests {
             .parent()
             .expect("workspace root");
         std::fs::read_to_string(root.join("tests/fixtures").join(name)).unwrap()
+    }
+
+    fn parsed_response<T>(name: &str) -> ParsedResponse<T>
+    where
+        T: DeserializeOwned,
+    {
+        ParsedResponse {
+            raw: serde_json::from_str::<Value>(&fixture(name)).unwrap(),
+            value: serde_json::from_str(&fixture(name)).unwrap(),
+        }
     }
 
     #[test]
@@ -421,26 +616,51 @@ mod tests {
     }
 
     #[test]
-    fn converts_axle_responses_into_artifact() {
-        let check_value: CheckResponse =
-            serde_json::from_str(&fixture("check_response.json")).unwrap();
-        let extract_value: ExtractDeclsResponse =
-            serde_json::from_str(&fixture("extract_decls_response.json")).unwrap();
+    fn parses_verify_proof_pass_response_fixture() {
+        let response: VerifyProofResponse =
+            serde_json::from_str(&fixture("verify_proof_pass_response.json")).unwrap();
 
-        let check = ParsedResponse {
-            raw: serde_json::from_str::<Value>(&fixture("check_response.json")).unwrap(),
-            value: check_value,
-        };
-        let extract = ParsedResponse {
-            raw: serde_json::from_str::<Value>(&fixture("extract_decls_response.json")).unwrap(),
-            value: extract_value,
-        };
+        assert!(response.okay);
+        assert!(response.failed_declarations.is_empty());
+        assert!(response.content.contains("theorem sample.bar"));
+    }
 
-        let artifact = artifact_from_responses(
+    #[test]
+    fn parses_verify_proof_fail_response_fixture() {
+        let response: VerifyProofResponse =
+            serde_json::from_str(&fixture("verify_proof_fail_response.json")).unwrap();
+
+        assert!(!response.okay);
+        assert_eq!(response.failed_declarations, vec!["sample.example_fail"]);
+    }
+
+    #[test]
+    fn converts_build_responses_into_artifact() {
+        let check = parsed_response::<CheckResponse>("check_response.json");
+        let extract = parsed_response::<ExtractDeclsResponse>("extract_decls_response.json");
+        let check_request = serde_json::to_value(CheckRequest {
+            content: check.value.content.clone(),
+            environment: "lean-4.28.0".to_owned(),
+            mathlib_options: Some(true),
+            ignore_imports: Some(true),
+            timeout_seconds: Some(12.0),
+        })
+        .unwrap();
+        let extract_request = serde_json::to_value(ExtractDeclsRequest {
+            content: check.value.content.clone(),
+            environment: "lean-4.28.0".to_owned(),
+            ignore_imports: Some(true),
+            timeout_seconds: Some(12.0),
+        })
+        .unwrap();
+
+        let artifact = build_artifact_from_responses(
             BuildArtifactContext {
                 source_path: Path::new("sample.lean"),
                 environment: "lean-4.28.0",
             },
+            &check_request,
+            &extract_request,
             &check,
             &extract,
         )
@@ -480,6 +700,122 @@ mod tests {
             artifact.declarations[1].dependencies,
             vec!["sample.foo".to_owned()]
         );
-        assert!(artifact.adapter.is_some());
+        assert!(artifact.verification.is_none());
+        assert_eq!(
+            artifact.adapter.as_ref().unwrap().responses["check"]["okay"],
+            json!(true)
+        );
+        assert_eq!(
+            artifact.adapter.as_ref().unwrap().requests["check"]["environment"],
+            json!("lean-4.28.0")
+        );
+    }
+
+    #[test]
+    fn converts_verify_proof_responses_into_artifact() {
+        let verify = parsed_response::<VerifyProofResponse>("verify_proof_fail_response.json");
+        let extract = parsed_response::<ExtractDeclsResponse>("extract_decls_response.json");
+        let verify_request = serde_json::to_value(VerifyProofRequest {
+            formal_statement: "theorem sample.bar : sample.foo = 1".to_owned(),
+            content: verify.value.content.clone(),
+            environment: "lean-4.28.0".to_owned(),
+            permitted_sorries: Some(vec!["sample.helper".to_owned()]),
+            mathlib_options: Some(true),
+            use_def_eq: Some(false),
+            ignore_imports: Some(true),
+            timeout_seconds: Some(30.0),
+        })
+        .unwrap();
+
+        let artifact = verify_proof_artifact_from_responses(
+            VerifyProofArtifactContext {
+                content_path: Path::new("proof.lean"),
+                environment: "lean-4.28.0",
+                formal_statement: "theorem sample.bar : sample.foo = 1",
+            },
+            &verify_request,
+            &verify,
+            &extract,
+        )
+        .unwrap();
+
+        assert_eq!(artifact.source.path.as_deref(), Some("proof.lean"));
+        assert_eq!(
+            artifact
+                .verification
+                .as_ref()
+                .expect("verification summary should be present")
+                .mode,
+            VerificationMode::VerifyProof
+        );
+        assert_eq!(
+            artifact.verification.as_ref().unwrap().status,
+            VerificationResultStatus::Fail
+        );
+        assert_eq!(
+            artifact.verification.as_ref().unwrap().failed_declarations,
+            vec!["sample.example_fail".to_owned()]
+        );
+        assert_eq!(
+            artifact
+                .declarations
+                .iter()
+                .find(|decl| decl.name == "sample.example_fail")
+                .unwrap()
+                .verification_status,
+            VerificationStatus::Failed
+        );
+        assert_eq!(
+            artifact.adapter.as_ref().unwrap().operation,
+            axle_core::AdapterOperation::VerifyProof
+        );
+        assert_eq!(
+            artifact.adapter.as_ref().unwrap().requests["verify_proof"]["formal_statement"],
+            json!("theorem sample.bar : sample.foo = 1")
+        );
+    }
+
+    #[test]
+    fn preserves_failed_declarations_missing_from_extracted_documents() {
+        let verify =
+            parsed_response::<VerifyProofResponse>("verify_proof_missing_decl_response.json");
+        let extract = parsed_response::<ExtractDeclsResponse>("extract_decls_response.json");
+        let verify_request = serde_json::to_value(VerifyProofRequest {
+            formal_statement: "theorem sample.main : True".to_owned(),
+            content: verify.value.content.clone(),
+            environment: "lean-4.28.0".to_owned(),
+            permitted_sorries: None,
+            mathlib_options: None,
+            use_def_eq: None,
+            ignore_imports: Some(true),
+            timeout_seconds: None,
+        })
+        .unwrap();
+
+        let artifact = verify_proof_artifact_from_responses(
+            VerifyProofArtifactContext {
+                content_path: Path::new("proof.lean"),
+                environment: "lean-4.28.0",
+                formal_statement: "theorem sample.main : True",
+            },
+            &verify_request,
+            &verify,
+            &extract,
+        )
+        .unwrap();
+
+        assert_eq!(
+            artifact.verification.as_ref().unwrap().failed_declarations,
+            vec![
+                "sample.example_fail".to_owned(),
+                "sample.missing_theorem".to_owned()
+            ]
+        );
+        assert!(
+            artifact
+                .declarations
+                .iter()
+                .all(|decl| decl.name != "sample.missing_theorem")
+        );
     }
 }

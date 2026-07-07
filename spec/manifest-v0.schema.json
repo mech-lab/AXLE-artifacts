@@ -123,6 +123,9 @@
         "hashes": {
           "type": "string"
         },
+        "verification": {
+          "type": "string"
+        },
         "adapter": {
           "type": "string"
         }

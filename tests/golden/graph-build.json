@@ -1,0 +1,162 @@
+{
+  "schema": "axle.graph.v0",
+  "root": "sha256:db007f23f501b89863dfbc9751e3e762a09c16ad62e5147e56b64a3d3f16348c",
+  "nodes": [
+    {
+      "id": "sha256:db007f23f501b89863dfbc9751e3e762a09c16ad62e5147e56b64a3d3f16348c",
+      "kind": "artifact",
+      "label": "artifact",
+      "payload": {
+        "type": "artifact",
+        "artifact_id": "sha256:db007f23f501b89863dfbc9751e3e762a09c16ad62e5147e56b64a3d3f16348c"
+      },
+      "edges": [
+        {
+          "label": "declaration",
+          "target": "sha256:3957a23019d9093152aa948bf39f4916b692ac97c9e8c8d12d7979750e1ec2ba"
+        },
+        {
+          "label": "declaration",
+          "target": "sha256:7a611946d566a07472f115de4004b7e3274d0cfc91f0dfab152e95e726d3f40b"
+        },
+        {
+          "label": "diagnostic",
+          "target": "sha256:aa6a6333b10efa7987a93244da6c0c223adf09e5dc47cd71c83bd9359502fad5"
+        },
+        {
+          "label": "environment",
+          "target": "sha256:76d8a3f10cedae0652c101b9cab24267b1f568752102b18979606204708618b4"
+        },
+        {
+          "label": "source",
+          "target": "sha256:9c34298a8fd885936bb22922cf3ce102ab4a8befe29522bc8d3c490512113134"
+        }
+      ]
+    },
+    {
+      "id": "sha256:9c34298a8fd885936bb22922cf3ce102ab4a8befe29522bc8d3c490512113134",
+      "kind": "source",
+      "label": "source",
+      "payload": {
+        "type": "source",
+        "language": "lean4",
+        "module": "Sample",
+        "path": "Sample.lean",
+        "source_digest": "sha256:9c34298a8fd885936bb22922cf3ce102ab4a8befe29522bc8d3c490512113134"
+      },
+      "edges": []
+    },
+    {
+      "id": "sha256:76d8a3f10cedae0652c101b9cab24267b1f568752102b18979606204708618b4",
+      "kind": "environment",
+      "label": "environment",
+      "payload": {
+        "type": "environment",
+        "engine": "axiom-lean-engine",
+        "engine_version": null,
+        "lean_version": "lean-4.28.0",
+        "mathlib_digest": null,
+        "environment_digest": "sha256:76d8a3f10cedae0652c101b9cab24267b1f568752102b18979606204708618b4"
+      },
+      "edges": []
+    },
+    {
+      "id": "sha256:7a611946d566a07472f115de4004b7e3274d0cfc91f0dfab152e95e726d3f40b",
+      "kind": "declaration",
+      "label": "Sample.bar",
+      "payload": {
+        "type": "declaration",
+        "name": "Sample.bar",
+        "declaration_kind": "theorem",
+        "verification_status": "verified"
+      },
+      "edges": [
+        {
+          "label": "body",
+          "target": "sha256:e4348998fade5f42615a7fe8f3625631afc6277747776216cfb3bb9f31b6e0a0"
+        },
+        {
+          "label": "dependency",
+          "target": "sha256:3957a23019d9093152aa948bf39f4916b692ac97c9e8c8d12d7979750e1ec2ba"
+        },
+        {
+          "label": "statement",
+          "target": "sha256:de537c58ffcd607f1e081d98289194ea702b2ba916109f278f54f64c268152e8"
+        }
+      ]
+    },
+    {
+      "id": "sha256:3957a23019d9093152aa948bf39f4916b692ac97c9e8c8d12d7979750e1ec2ba",
+      "kind": "declaration",
+      "label": "Sample.foo",
+      "payload": {
+        "type": "declaration",
+        "name": "Sample.foo",
+        "declaration_kind": "def",
+        "verification_status": "verified"
+      },
+      "edges": [
+        {
+          "label": "body",
+          "target": "sha256:8862145ad6ccaad2fdf15826142a263b7a81cf7a87bec6b5db95feb13d97d0c1"
+        },
+        {
+          "label": "statement",
+          "target": "sha256:4624c689767da0a0e73d32848b730448a93165313daa46d4b202dd5e9d1b8feb"
+        }
+      ]
+    },
+    {
+      "id": "sha256:de537c58ffcd607f1e081d98289194ea702b2ba916109f278f54f64c268152e8",
+      "kind": "statement",
+      "label": "sha256:37ef8ade22d6e99716c98252f5e4244468b4ac64984f12f900d629c3b7c0a438",
+      "payload": {
+        "type": "statement",
+        "digest": "sha256:37ef8ade22d6e99716c98252f5e4244468b4ac64984f12f900d629c3b7c0a438"
+      },
+      "edges": []
+    },
+    {
+      "id": "sha256:4624c689767da0a0e73d32848b730448a93165313daa46d4b202dd5e9d1b8feb",
+      "kind": "statement",
+      "label": "sha256:3d1917aa425fd7059394e1413a9cf36a1304374e10ea4b88200fd2d34ce749d4",
+      "payload": {
+        "type": "statement",
+        "digest": "sha256:3d1917aa425fd7059394e1413a9cf36a1304374e10ea4b88200fd2d34ce749d4"
+      },
+      "edges": []
+    },
+    {
+      "id": "sha256:e4348998fade5f42615a7fe8f3625631afc6277747776216cfb3bb9f31b6e0a0",
+      "kind": "body",
+      "label": "sha256:5a633da644c1afc6f5222be040e6a19d687c01104c0263cce32773e07376dfa8",
+      "payload": {
+        "type": "body",
+        "digest": "sha256:5a633da644c1afc6f5222be040e6a19d687c01104c0263cce32773e07376dfa8"
+      },
+      "edges": []
+    },
+    {
+      "id": "sha256:8862145ad6ccaad2fdf15826142a263b7a81cf7a87bec6b5db95feb13d97d0c1",
+      "kind": "body",
+      "label": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "payload": {
+        "type": "body",
+        "digest": "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+      },
+      "edges": []
+    },
+    {
+      "id": "sha256:aa6a6333b10efa7987a93244da6c0c223adf09e5dc47cd71c83bd9359502fad5",
+      "kind": "diagnostic",
+      "label": "graph.test",
+      "payload": {
+        "type": "diagnostic",
+        "level": "warning",
+        "message": "sample warning",
+        "code": "graph.test"
+      },
+      "edges": []
+    }
+  ]
+}

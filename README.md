@@ -19,22 +19,35 @@ That split is intentional:
 
 ## Current State
 
-The current repository ships the first live AXLE-backed vertical slice. `axle-rs build` reads a Lean file, calls upstream AXLE `check` and `extract_decls`, converts the result into a `.axle` directory artifact, and preserves the raw AXLE API payloads as auxiliary metadata.
+The current repository now ships the full Milestone 3 adapter split. AXLE-rs has two live AXLE-backed flows that emit the same `.axle` artifact family:
+
+- `axle-rs build` for Lean compilation and declaration-extraction artifacts
+- `axle-rs verify-proof` for formal-statement proof-verification artifacts
 
 ```bash
 axle-rs build sample.lean \
   --environment lean-4.28.0 \
   -o sample.axle
+
+axle-rs verify-proof statement.lean proof.lean \
+  --environment lean-4.28.0 \
+  -o proof.verified.axle
 ```
 
 Today’s artifact flow supports:
 
 - `.axle` directory bundles with `manifest.json`, `source.json`, `declarations.json`, `diagnostics.json`, and `hashes.json`
+- optional hashed `verification.json` for proof-verification artifacts
 - deterministic artifact IDs based on canonical JSON hashing
 - `inspect`, `verify`, and `hash` commands for local artifact introspection
-- optional `adapter.json` metadata containing raw upstream AXLE `check` and `extract_decls` responses
+- `build` via AXLE `check` + `extract_decls`
+- `verify-proof` via AXLE `verify_proof` + `extract_decls`
+- derived Merkle graph construction from verified artifact core data
+- `graph` export in JSON and DOT formats
+- `diff` summaries over two verified artifacts
+- optional non-hashed `adapter.json` metadata containing raw upstream AXLE request and response envelopes
 
-`adapter.json` is intentionally excluded from the artifact digest so AXLE timing differences and other volatile response fields do not destabilize content addressing.
+`adapter.json` is intentionally excluded from the artifact digest so AXLE timing differences and other volatile response fields do not destabilize content addressing. When a proof-verification run is emitted, the full formal statement text stays in `adapter.json`, while the hashed core binds to it through `verification.json` via a deterministic `formal_statement_digest`.
 
 ## Research Goals
 
@@ -54,16 +67,20 @@ The research program in this fork points toward:
 AXLE-rs currently assumes a layered pipeline:
 
 ```text
-Lean source
-   ↓
-AXLE checking / extraction
-   ↓
+formal statement optional
+          │
+Lean source / proof candidate
+          ↓
+AXLE checking, verification, or extraction
+          ↓
 .axle artifact
-   ↓
+          ↓
 optional receipt / registry / verifier layers
 ```
 
-In the present slice, AXLE remains the source of truth for processed Lean content and declaration extraction, while AXLE-rs is responsible for normalizing those outputs into a stable artifact form.
+In the present slice, AXLE remains the source of truth for processed Lean content and declaration extraction, while AXLE-rs is responsible for normalizing those outputs into a stable artifact form. `build` emits compilation-oriented artifacts. `verify-proof` emits the same artifact family plus a hashed verification summary that records pass/fail state and binds the artifact core to the formal statement by digest.
+
+Milestone 4 adds a derived Merkle layer on top of that artifact core. The graph is computed from verified artifact contents at read time rather than stored inside `.axle`, which keeps the persisted bundle format stable while still enabling content-addressed graph export and artifact-to-artifact comparison.
 
 ## Roadmap At A Glance
 
@@ -71,8 +88,8 @@ The roadmap is incremental rather than revolutionary.
 
 - Milestone 1: fork bootstrap and Rust workspace foundation — completed
 - Milestone 2: artifact v0 directory format, hashing, inspect/verify flows — completed
-- Milestone 3: first AXLE-backed build slice — landed, with further adapter growth planned
-- Milestone 4: Merkle-style object graphs, diffing, and graph export — planned
+- Milestone 3: build and verify-proof AXLE adapter flows — completed
+- Milestone 4: derived Merkle graphs, graph export, and summary diff — completed
 - Milestone 5: receipt binding and verification workflows — planned
 - Milestone 6: WASM-facing inspection and verification surfaces — planned
 
@@ -84,7 +101,7 @@ This repository now contains two overlapping but distinct documentation and impl
 
 - `axle/`, `docs/`, and most of `examples/` preserve the upstream AXLE Python/API/CLI surface.
 - `crates/` contains the Rust implementation of AXLE-rs.
-- `spec/` contains the evolving artifact, receipt, and Merkle-DAG design notes for the fork.
+- `spec/` contains the evolving artifact, verification, receipt, and Merkle-DAG design notes for the fork.
 - `examples/artifacts/` contains example `.axle` output.
 
 The preserved `docs/` tree is still upstream AXLE-facing documentation. It should be read as the operational reference for the Python client, hosted API, and existing AXLE tools, not as a complete description of the AXLE-rs fork vision.

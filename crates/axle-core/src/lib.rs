@@ -1,6 +1,7 @@
 use axle_hash::Digest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 pub const ARTIFACT_SCHEMA_V0: &str = "axle.artifact.v0";
 pub const DEFAULT_MANIFEST_FILE: &str = "manifest.json";
@@ -8,6 +9,7 @@ pub const DEFAULT_SOURCE_FILE: &str = "source.json";
 pub const DEFAULT_DECLARATIONS_FILE: &str = "declarations.json";
 pub const DEFAULT_DIAGNOSTICS_FILE: &str = "diagnostics.json";
 pub const DEFAULT_HASHES_FILE: &str = "hashes.json";
+pub const DEFAULT_VERIFICATION_FILE: &str = "verification.json";
 pub const DEFAULT_ADAPTER_FILE: &str = "adapter.json";
 pub const ADAPTER_SCHEMA_V0: &str = "axle.adapter.v0";
 
@@ -21,6 +23,8 @@ pub struct AxleArtifact {
     pub diagnostics: Vec<Diagnostic>,
     #[serde(default)]
     pub hashes: HashesFile,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verification: Option<VerificationSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adapter: Option<AdapterMetadata>,
 }
@@ -63,6 +67,7 @@ impl AxleArtifact {
             declarations: Vec::new(),
             diagnostics: Vec::new(),
             hashes: HashesFile::default(),
+            verification: None,
             adapter: None,
         }
     }
@@ -114,6 +119,8 @@ pub struct ObjectPaths {
     pub diagnostics: String,
     pub hashes: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verification: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adapter: Option<String>,
 }
 
@@ -124,6 +131,7 @@ impl Default for ObjectPaths {
             declarations: DEFAULT_DECLARATIONS_FILE.to_owned(),
             diagnostics: DEFAULT_DIAGNOSTICS_FILE.to_owned(),
             hashes: DEFAULT_HASHES_FILE.to_owned(),
+            verification: None,
             adapter: None,
         }
     }
@@ -200,22 +208,134 @@ pub struct HashesFile {
     pub declarations: Option<Digest>,
     pub diagnostics: Option<Digest>,
     pub environment: Option<Digest>,
+    pub verification: Option<Digest>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VerificationMode {
+    VerifyProof,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VerificationResultStatus {
+    Pass,
+    Fail,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerificationSummary {
+    pub mode: VerificationMode,
+    pub status: VerificationResultStatus,
+    pub formal_statement_digest: Digest,
+    #[serde(default)]
+    pub failed_declarations: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AdapterOperation {
+    Build,
+    VerifyProof,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdapterMetadata {
+    pub schema: String,
+    pub operation: AdapterOperation,
+    pub requests: BTreeMap<String, Value>,
+    pub responses: BTreeMap<String, Value>,
+}
+
+impl AdapterMetadata {
+    pub fn new(
+        operation: AdapterOperation,
+        requests: BTreeMap<String, Value>,
+        responses: BTreeMap<String, Value>,
+    ) -> Self {
+        Self {
+            schema: ADAPTER_SCHEMA_V0.to_owned(),
+            operation,
+            requests,
+            responses,
+        }
+    }
+
+    pub fn build(requests: BTreeMap<String, Value>, responses: BTreeMap<String, Value>) -> Self {
+        Self::new(AdapterOperation::Build, requests, responses)
+    }
+
+    pub fn verify_proof(
+        requests: BTreeMap<String, Value>,
+        responses: BTreeMap<String, Value>,
+    ) -> Self {
+        Self::new(AdapterOperation::VerifyProof, requests, responses)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AdapterMetadata {
+struct AdapterMetadataCurrent {
+    pub schema: String,
+    pub operation: AdapterOperation,
+    #[serde(default)]
+    pub requests: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub responses: BTreeMap<String, Value>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+struct AdapterMetadataLegacy {
     pub schema: String,
     pub check: Value,
     pub extract_decls: Value,
 }
 
-impl AdapterMetadata {
-    pub fn new(check: Value, extract_decls: Value) -> Self {
-        Self {
-            schema: ADAPTER_SCHEMA_V0.to_owned(),
-            check,
-            extract_decls,
+impl Serialize for AdapterMetadata {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        AdapterMetadataCurrent {
+            schema: self.schema.clone(),
+            operation: self.operation.clone(),
+            requests: self.requests.clone(),
+            responses: self.responses.clone(),
         }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for AdapterMetadata {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let raw = Value::deserialize(deserializer)?;
+
+        if raw.get("operation").is_some() {
+            let current: AdapterMetadataCurrent =
+                serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
+            return Ok(Self {
+                schema: current.schema,
+                operation: current.operation,
+                requests: current.requests,
+                responses: current.responses,
+            });
+        }
+
+        let legacy: AdapterMetadataLegacy =
+            serde_json::from_value(raw).map_err(serde::de::Error::custom)?;
+        let mut responses = BTreeMap::new();
+        responses.insert("check".to_owned(), legacy.check);
+        responses.insert("extract_decls".to_owned(), legacy.extract_decls);
+
+        Ok(Self {
+            schema: legacy.schema,
+            operation: AdapterOperation::Build,
+            requests: BTreeMap::new(),
+            responses,
+        })
     }
 }
 
@@ -241,7 +361,9 @@ impl DeclarationKind {
 
 #[cfg(test)]
 mod tests {
-    use super::DeclarationKind;
+    use super::{AdapterMetadata, AdapterOperation, DeclarationKind};
+    use serde_json::json;
+    use std::collections::BTreeMap;
 
     #[test]
     fn maps_upstream_axle_declaration_kinds() {
@@ -294,5 +416,38 @@ mod tests {
             DeclarationKind::from_axle_kind("mystery"),
             DeclarationKind::Unknown
         );
+    }
+
+    #[test]
+    fn serializes_current_adapter_envelope_shape() {
+        let mut requests = BTreeMap::new();
+        requests.insert(
+            "verify_proof".to_owned(),
+            json!({ "formal_statement": "theorem foo" }),
+        );
+        let mut responses = BTreeMap::new();
+        responses.insert("verify_proof".to_owned(), json!({ "okay": true }));
+
+        let adapter = AdapterMetadata::verify_proof(requests, responses);
+        let value = serde_json::to_value(adapter).unwrap();
+
+        assert_eq!(value["operation"], "verify_proof");
+        assert!(value.get("requests").is_some());
+        assert!(value.get("responses").is_some());
+    }
+
+    #[test]
+    fn deserializes_legacy_adapter_shape() {
+        let adapter: AdapterMetadata = serde_json::from_value(json!({
+            "schema": "axle.adapter.v0",
+            "check": { "okay": true },
+            "extract_decls": { "documents": {} }
+        }))
+        .unwrap();
+
+        assert_eq!(adapter.operation, AdapterOperation::Build);
+        assert!(adapter.requests.is_empty());
+        assert_eq!(adapter.responses["check"]["okay"], json!(true));
+        assert_eq!(adapter.responses["extract_decls"]["documents"], json!({}));
     }
 }

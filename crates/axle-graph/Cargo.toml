@@ -1,5 +1,5 @@
 [package]
-name = "axle-rs"
+name = "axle-graph"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,16 +8,11 @@ rust-version.workspace = true
 [dependencies]
 anyhow.workspace = true
 axle-artifact = { path = "../axle-artifact" }
-axle-client = { path = "../axle-client" }
 axle-core = { path = "../axle-core" }
-axle-graph = { path = "../axle-graph" }
-axle-receipts = { path = "../axle-receipts" }
-clap.workspace = true
+axle-hash = { path = "../axle-hash" }
+serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
-assert_cmd.workspace = true
-axle-hash = { path = "../axle-hash" }
-httpmock.workspace = true
-predicates.workspace = true
 tempfile.workspace = true

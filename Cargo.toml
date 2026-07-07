@@ -3,6 +3,7 @@ members = [
   "crates/axle-core",
   "crates/axle-artifact",
   "crates/axle-hash",
+  "crates/axle-graph",
   "crates/axle-client",
   "crates/axle-cli",
   "crates/axle-receipts",
