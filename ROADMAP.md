@@ -1,33 +1,70 @@
 # Roadmap
 
-## Milestone 1
+This roadmap tracks the fork from bootstrap through a fuller proof-artifact research stack. It is meant to describe implementation status, not just aspirations.
 
-- Add fork notice and repository positioning.
-- Stand up a Rust workspace with the initial crate split.
-- Ship a minimal `axle-rs` CLI with `--version` and `artifact new`.
+## Milestone 1 — Fork Bootstrap And Positioning
 
-## Milestone 2
+Status: completed
 
-- Define `.axle` directory artifact v0.
-- Implement deterministic load, save, inspect, hash, and verify flows.
-- Add golden fixtures and round-trip tests.
+This milestone established the fork identity, preserved the upstream AXLE surface, and created the Rust workspace that AXLE-rs builds on.
 
-## Milestone 3
+- fork notice and repository positioning
+- initial Rust crate layout
+- minimal `axle-rs` CLI surface
 
-- Add an AXLE adapter crate for parsing upstream-style verification output.
-- Convert AXLE verification responses into `.axle` artifacts.
+## Milestone 2 — Artifact V0 Foundations
 
-## Milestone 4
+Status: completed
 
-- Extend hashing into a Merkle-style object graph.
-- Add artifact diffing and graph export.
+This milestone established the first `.axle` directory artifact model and the deterministic local tooling around it.
 
-## Milestone 5
+- artifact v0 directory format
+- canonical hashing
+- load, save, inspect, verify, and hash flows
+- example artifact fixtures and round-trip tests
 
-- Add unsigned receipt binding first.
-- Reserve room for later signatures and policy handling.
+## Milestone 3 — AXLE-Backed Build Slice
 
-## Milestone 6
+Status: current slice landed; further expansion planned
 
-- Add a WASM target for no-network artifact inspection and verification.
+This milestone begins the adapter layer between upstream AXLE outputs and AXLE-rs artifacts.
 
+- live `axle-rs build` path using AXLE `check` and `extract_decls`
+- conversion from AXLE responses into `.axle` bundles
+- auxiliary raw response preservation via `adapter.json`
+
+Still open within this milestone:
+
+- broader AXLE endpoint coverage
+- richer declaration metadata policy
+- clearer separation between artifact build, proof verification, and later attestation flows
+
+## Milestone 4 — Merkle Object Graphs
+
+Status: planned
+
+This milestone turns flat artifact hashing into an explicit object model suitable for deeper systems work.
+
+- Merkle-style node model
+- artifact diffing
+- graph export and dependency inspection
+
+## Milestone 5 — Receipt Binding
+
+Status: planned
+
+This milestone introduces attestations about artifacts without collapsing artifacts and receipts into the same object.
+
+- unsigned receipt format first
+- digest binding between artifact and receipt
+- later signature and policy hooks
+
+## Milestone 6 — WASM And Distribution Surfaces
+
+Status: planned
+
+This milestone explores lightweight verification and inspection surfaces for downstream environments.
+
+- WASM-facing inspection and verification targets
+- browser or sandbox-friendly artifact tooling
+- future registry-facing distribution work

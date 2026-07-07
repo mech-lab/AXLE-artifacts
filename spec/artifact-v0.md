@@ -1,5 +1,9 @@
 # `axle.artifact.v0`
 
+`axle.artifact.v0` is the current concrete output format of the AXLE-rs fork. It takes AXLE-compatible Lean processing results and freezes them into a deterministic, inspectable directory artifact that can survive outside a single API response or runtime session.
+
+The emphasis in v0 is stability and transparency rather than compression or maximal fidelity. This is the layer where AXLE-rs turns proof-processing output into a durable research artifact.
+
 ## Goals
 
 - Freeze AXLE-compatible proof outputs into a deterministic portable artifact.

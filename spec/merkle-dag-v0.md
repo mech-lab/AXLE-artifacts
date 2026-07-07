@@ -1,6 +1,6 @@
 # Merkle DAG v0
 
-This document reserves the object-graph design that will extend artifact hashing beyond flat JSON bundle digests.
+This document reserves the object-graph design that would carry AXLE-rs beyond flat bundle hashing into a richer content-addressed proof-object model. It is the planned bridge from artifact v0 toward diffing, deduplication, and registry-oriented storage.
 
 ## Scope
 
@@ -14,4 +14,3 @@ This document reserves the object-graph design that will extend artifact hashing
 - Dependency ordering rules
 - Root object selection
 - Registry addressing
-
