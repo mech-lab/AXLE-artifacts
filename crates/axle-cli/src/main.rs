@@ -7,12 +7,15 @@ use axle_client::{
 };
 use axle_core::{VerificationResultStatus, VerificationStatus};
 use axle_graph::{ArtifactDiff, MerkleGraph};
+use axle_receipts::flight_recorder::{FlightEvent, RecorderState, new_recorder, record_event, finalize_recording};
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Parser)]
 #[command(
@@ -23,6 +26,9 @@ use std::process::ExitCode;
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
+    /// Enable flight recording and write the event log to the given path
+    #[arg(long, global = true)]
+    record: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -121,6 +127,8 @@ enum DiffFormat {
     Json,
 }
 
+static RECORDER_STATE: Mutex<Option<RecorderState>> = Mutex::new(None);
+
 fn main() -> ExitCode {
     match run() {
         Ok(code) => code,
@@ -134,7 +142,12 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode> {
     let cli = Cli::parse();
 
-    match cli.command {
+    if let Some(log_path) = &cli.record {
+        let recorder = new_recorder(log_path.clone());
+        *RECORDER_STATE.lock().unwrap() = Some(recorder);
+    }
+
+    let result = match cli.command {
         Some(Command::Build(args)) => build(args),
         Some(Command::VerifyProof(args)) => verify_proof(args),
         Some(Command::Graph(args)) => graph(args),
@@ -151,6 +164,20 @@ fn run() -> Result<ExitCode> {
             println!();
             Ok(ExitCode::SUCCESS)
         }
+    };
+
+    if let Some(recorder) = RECORDER_STATE.lock().unwrap().take() {
+        finalize_recording(recorder)?;
+    }
+
+    result
+}
+
+fn record_flight_event(event: FlightEvent) {
+    if let Ok(mut guard) = RECORDER_STATE.lock() {
+        if let Some(recorder) = guard.as_mut() {
+            record_event(recorder, event);
+        }
     }
 }
 
@@ -166,6 +193,7 @@ fn artifact_new(path: PathBuf) -> Result<ExitCode> {
 }
 
 fn build(args: BuildArgs) -> Result<ExitCode> {
+    record_flight_event(FlightEvent::BuildCommand(args.input.clone()));
     let source = fs::read_to_string(&args.input)
         .with_context(|| format!("failed to read {}", args.input.display()))?;
     let output_path = match args.output {
@@ -205,8 +233,10 @@ fn build(args: BuildArgs) -> Result<ExitCode> {
         .save_dir(&output_path)
         .with_context(|| format!("failed to write artifact to {}", output_path.display()))?;
 
+    let digest = artifact.artifact_digest()?;
+    record_flight_event(FlightEvent::ArtifactCreated(digest.clone()));
     println!("built {}", output_path.display());
-    println!("artifact_id: {}", artifact.artifact_digest()?);
+    println!("artifact_id: {}", digest);
     Ok(ExitCode::SUCCESS)
 }
 

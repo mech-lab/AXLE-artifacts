@@ -1,16 +1,29 @@
-# `axle.receipt.v0`
+# AXLE Receipt Binding v0 Specification
 
-This document reserves the receipt-binding layer for a later AXLE-rs milestone. The intent is to let verifiers, policies, and eventually signatures speak about a specific artifact digest without collapsing artifact content and attestation content into one file format.
+## Flight Recorder Capabilities
 
-## Scope
+The flight recorder is a diagnostic and replay tool that captures and reconstructs artifact processing workflows. It records key events during CLI operations and allows deterministic replay of the workflow.
 
-- Bind a verification statement to a specific `axle.artifact.v0` digest.
-- Keep receipts separate from artifact bundles.
-- Support unsigned receipts first.
+### Key Features
+- Records artifact creation, receipt issuance, verification, and CLI command executions
+- Stores events in JSON format for replay
+- Supports replay of artifact workflows to verify deterministic outcomes
+- Integrates with existing CLI commands via `--record` flag
 
-## Deferred work
+### Usage
+1. Enable recording with `--record <log_path>`
+2. Events are automatically recorded during build, verify, and other commands
+3. Replay with `axle-rs replay <log_path>` (to be implemented)
 
-- Signature encoding
-- Policy identifiers
-- Environment capture policy
-- Receipt verification CLI flows
+### Event Types
+- `ArtifactCreated(Digest)`
+- `ReceiptIssued(Digest)`
+- `ArtifactVerified(Digest)`
+- `ReceiptVerified(Digest)`
+- `BuildCommand(PathBuf)`
+- `VerifyProofCommand(PathBuf, PathBuf)`
+
+### Implementation Notes
+- Uses `serde` for JSON serialization/deserialization
+- Maintains state in `RecorderState` struct
+- Events are stored in a log file specified by the user

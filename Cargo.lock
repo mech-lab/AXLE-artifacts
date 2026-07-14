@@ -365,9 +365,15 @@ dependencies = [
 name = "axle-receipts"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "axle-artifact",
+ "axle-core",
  "axle-hash",
  "chrono",
  "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]

@@ -1,6 +1,11 @@
+use anyhow::{Context, Result};
 use axle_hash::Digest;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::Path;
+
+pub mod flight_recorder;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AxleReceipt {
@@ -43,6 +48,35 @@ impl AxleReceipt {
 
     pub fn verifies_artifact(&self, artifact_id: &Digest) -> bool {
         &self.subject.artifact_id == artifact_id
+    }
+
+    pub fn artifact_digest(&self) -> &Digest {
+        &self.subject.artifact_id
+    }
+
+    pub fn save_dir(&self, path: &Path) -> Result<()> {
+        let target = if path.is_dir() {
+            path.join("receipt.axle")
+        } else {
+            path.to_path_buf()
+        };
+        let json = serde_json::to_string_pretty(self)
+            .context("failed to serialize receipt to JSON")?;
+        fs::write(&target, json)
+            .with_context(|| format!("failed to write receipt to {}", target.display()))?;
+        Ok(())
+    }
+
+    pub fn load_dir(path: &Path) -> Result<Self> {
+        let target = if path.is_dir() {
+            path.join("receipt.axle")
+        } else {
+            path.to_path_buf()
+        };
+        let data = fs::read_to_string(&target)
+            .with_context(|| format!("failed to read receipt from {}", target.display()))?;
+        serde_json::from_str(&data)
+            .with_context(|| format!("failed to parse receipt from {}", target.display()))
     }
 }
 
