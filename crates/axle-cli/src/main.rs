@@ -15,7 +15,6 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Parser)]
 #[command(
@@ -166,8 +165,8 @@ fn run() -> Result<ExitCode> {
         }
     };
 
-    if let Some(recorder) = RECORDER_STATE.lock().unwrap().take() {
-        finalize_recording(recorder)?;
+    if let Some(mut recorder) = RECORDER_STATE.lock().unwrap().take() {
+        finalize_recording(&mut recorder)?;
     }
 
     result

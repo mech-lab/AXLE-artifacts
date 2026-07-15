@@ -7,6 +7,7 @@ members = [
   "crates/axle-client",
   "crates/axle-cli",
   "crates/axle-receipts",
+  "crates/axle-flight-recorder",
 ]
 resolver = "2"
 

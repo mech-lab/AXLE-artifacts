@@ -337,6 +337,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "axle-flight-recorder"
+version = "0.1.0"
+
+[[package]]
 name = "axle-graph"
 version = "0.1.0"
 dependencies = [
@@ -368,6 +372,7 @@ dependencies = [
  "anyhow",
  "axle-artifact",
  "axle-core",
+ "axle-flight-recorder",
  "axle-hash",
  "chrono",
  "serde",
