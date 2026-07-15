@@ -12,7 +12,7 @@ serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
 sha2.workspace = true
-axle-flight-recorder = { path = "../axle-flight-recorder" }
+axle-flight-recorder = { path = "./axle-flight-recorder" }
 [dev-dependencies]
 axle-core = { path = "../axle-core" }
 axle-artifact = { path = "../axle-artifact" }
