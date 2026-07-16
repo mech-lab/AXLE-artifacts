@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.blackboxlabs.dev/due.legal_defensibility_bundle.v1.schema.json",
+  "title": "DUE Legal Defensibility Bundle v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "bundle_id",
+    "created_at",
+    "matter",
+    "actions",
+    "authorities",
+    "privileges",
+    "disclosures",
+    "reviews",
+    "reliances",
+    "proof_artifacts"
+  ],
+  "properties": {
+    "schema": { "const": "due.legal_defensibility_bundle.v1" },
+    "bundle_id": { "type": "string", "pattern": "^ldb_[a-f0-9]{24}$" },
+    "created_at": { "type": "string" },
+    "matter": { "$ref": "#/$defs/matter" },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/action" }
+    },
+    "authorities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/authority" }
+    },
+    "privileges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/privilege" }
+    },
+    "disclosures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/disclosure" }
+    },
+    "reviews": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/review" }
+    },
+    "reliances": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reliance" }
+    },
+    "proof_artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/axle_receipt_reference" }
+    }
+  },
+  "$defs": {
+    "matter": {
+      "type": "object",
+      "required": ["schema", "matter_id", "client", "matter_type", "jurisdiction", "confidentiality", "created_at"],
+      "properties": {
+        "schema": { "const": "due.matter.v1" },
+        "matter_id": { "type": "string" },
+        "client": { "type": "string" },
+        "matter_type": { "type": "string" },
+        "jurisdiction": { "type": "string" },
+        "confidentiality": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": ["schema", "action_id", "matter_id", "action_type", "actor", "issue", "output", "created_at"],
+      "properties": {
+        "schema": { "const": "due.duty_action.v1" },
+        "action_id": { "type": "string" },
+        "matter_id": { "type": "string" },
+        "action_type": { "type": "string" },
+        "actor": { "type": "string" },
+        "issue": { "type": "string" },
+        "output": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "authority": {
+      "type": "object",
+      "required": ["schema", "authority_id", "action_id", "authority_type", "source", "rule", "created_at"],
+      "properties": {
+        "schema": { "const": "due.authority.v1" },
+        "authority_id": { "type": "string" },
+        "action_id": { "type": "string" },
+        "authority_type": { "type": "string" },
+        "source": { "type": "string" },
+        "rule": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "privilege": {
+      "type": "object",
+      "required": ["schema", "privilege_id", "action_id", "status", "basis", "created_at"],
+      "properties": {
+        "schema": { "const": "due.privilege.v1" },
+        "privilege_id": { "type": "string" },
+        "action_id": { "type": "string" },
+        "status": { "type": "string" },
+        "basis": { "type": "string" },
+        "reviewer": { "type": ["string", "null"] },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "disclosure": {
+      "type": "object",
+      "required": ["schema", "disclosure_id", "action_id", "status", "audience", "created_at"],
+      "properties": {
+        "schema": { "const": "due.disclosure.v1" },
+        "disclosure_id": { "type": "string" },
+        "action_id": { "type": "string" },
+        "status": { "type": "string" },
+        "audience": { "type": "string" },
+        "note": { "type": ["string", "null"] },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "required": ["schema", "review_id", "action_id", "reviewer", "role", "decision", "created_at"],
+      "properties": {
+        "schema": { "const": "due.review.v1" },
+        "review_id": { "type": "string" },
+        "action_id": { "type": "string" },
+        "reviewer": { "type": "string" },
+        "role": { "type": "string" },
+        "decision": { "type": "string" },
+        "note": { "type": ["string", "null"] },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "reliance": {
+      "type": "object",
+      "required": ["schema", "reliance_id", "action_id", "relied_upon_by_human", "reliance_type", "created_at"],
+      "properties": {
+        "schema": { "const": "due.reliance.v1" },
+        "reliance_id": { "type": "string" },
+        "action_id": { "type": "string" },
+        "relied_upon_by_human": { "type": "boolean" },
+        "reliance_type": { "type": "string" },
+        "final_decision_maker": { "type": ["string", "null"] },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "axle_receipt_reference": {
+      "type": "object",
+      "required": ["schema", "proof_id", "action_id", "artifact_id", "receipt_id", "policy_id", "verification_status", "created_at"],
+      "properties": {
+        "schema": { "const": "due.axle_receipt_reference.v1" },
+        "proof_id": { "type": "string" },
+        "action_id": { "type": "string" },
+        "artifact_id": { "type": "string" },
+        "receipt_id": { "type": "string" },
+        "policy_id": { "type": "string" },
+        "verification_status": { "enum": ["pass", "fail", "unknown"] },
+        "note": { "type": ["string", "null"] },
+        "created_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
