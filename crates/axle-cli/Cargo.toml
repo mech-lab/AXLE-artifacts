@@ -10,10 +10,14 @@ anyhow.workspace = true
 axle-artifact = { path = "../axle-artifact" }
 axle-client = { path = "../axle-client" }
 axle-core = { path = "../axle-core" }
+axle-flight-recorder = { path = "../axle-flight-recorder" }
 axle-graph = { path = "../axle-graph" }
 axle-receipts = { path = "../axle-receipts" }
 clap.workspace = true
 serde_json.workspace = true
+ed25519-dalek = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }
 
 [dev-dependencies]
 assert_cmd.workspace = true
@@ -21,3 +25,7 @@ axle-hash = { path = "../axle-hash" }
 httpmock.workspace = true
 predicates.workspace = true
 tempfile.workspace = true
+
+[[bin]]
+name = "axle-rs"
+path = "src/main.rs"

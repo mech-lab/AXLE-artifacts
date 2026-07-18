@@ -1,0 +1,27 @@
+{
+  "schema": "axle.claim.v0",
+  "claim_type": "insurance_risk",
+  "subject": {
+    "id": "sub-123",
+    "name": "Insurance Policy",
+    "description": "Commercial auto insurance policy",
+    "attributes": {
+      "policy_number": "INS-2026-001",
+      "effective_date": "2026-01-15"
+    }
+  },
+  "issuer": "axle-rs",
+  "created_at": "2026-07-18T02:00:00Z",
+  "evidence": {
+    "payload_hash": "sha256:abc123...",
+    "attachment_hashes": ["sha256:def456..."]
+  },
+  "verification_policy": {
+    "schema_version": "1.0",
+    "required_signers": ["axle-rs", "verifier-org"],
+    "verification_methods": ["clinic", "webhook"],
+    "constraints": {
+      "min_evidence_count": 2
+    }
+  }
+}

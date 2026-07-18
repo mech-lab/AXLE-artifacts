@@ -8,6 +8,7 @@ members = [
   "crates/axle-cli",
   "crates/axle-receipts",
   "crates/axle-flight-recorder",
+  "crates/axle-flight-recorder",
 ]
 resolver = "2"
 
@@ -22,9 +23,11 @@ anyhow = "1.0"
 assert_cmd = "2.1"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
+ed25519-dalek = "3.0"
 hex = "0.4"
 httpmock = "0.7"
 predicates = "3.1"
+rand = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

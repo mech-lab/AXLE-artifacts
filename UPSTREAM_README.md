@@ -1,126 +1,85 @@
-# AXLE
+# Independent Proof Artifact Engine
 
-**Ax**iom **L**ean **E**ngine - Python client and CLI for the AXLE Lean verification API.
+AXLE-rs is a Rust-native platform for creating durable, verifiable proof artifacts designed for compliance, insurance, and legal applications. Unlike traditional proof systems that focus on formal methods research, AXLE-rs provides a production-ready infrastructure for generating, attesting, and independently verifying legally significant artifacts that meet regulatory requirements.
 
-Homepage: https://axle.axiommath.ai/
+## Why AXLE-rs Exists
 
-## Recent Announcements
+Modern compliance workflows require more than just verification - they need auditable trails, regulatory compliance, and independent verification capabilities. AXLE-rs addresses this gap by providing:
 
-<details open>
-<summary><strong>July 1, 2026 - v1.4.0</strong></summary>
+- **Independent Verification**: Create artifacts that can be verified by third parties without requiring the original issuer
+- **Regulatory Compliance**: Built-in support for insurance risk assessments, compliance controls, and legal disclosures
+- **Audit Trails**: Cryptographic receipts and signing for immutable audit trails
+- **Pluggable Policies**: Configurable verification policies for different regulatory domains
 
-This update comes with two notable changes and a variety of additional features:
+## Core Concepts
 
-- **`ignore_imports` now defaults to `true`** — on an import mismatch, AXLE substitutes the default header and reuses the cached environment.
-- In turn, **`ignore_imports=false` no longer errors: it now processes your imports as written**. However, note that this is much slower and may cause issues if a dependency is missing. See [Import Mismatches](https://axle.axiommath.ai/v1/docs/troubleshooting/#import-mismatches).
-- **Reworked `okay` and `tool_messages`** — `check` now reports `sorry`/axiom/unsafe findings as warnings (not errors), and `repair_proofs` reports failed repairs as errors. See [Interpreting the `okay` field](https://axle.axiommath.ai/v1/docs/troubleshooting/#interpreting-the-okay-field).
+### .axle Artifact Format
+A standardized directory structure that bundles:
+- `manifest.json`: Artifact metadata and schema version
+- Typed JSON files: `claim.json`, `evidence.json`, `verification_policy.json`
+- `hashes.json`: Canonical hashes for content addressing
+- Optional signed components
 
-Also: opaque support in `merge`/`extract_decls`, a `disprove` fix, and Lean 4.30/4.31. See the [changelog](https://axle.axiommath.ai/v1/docs/changelog/) for more details.
+### Key Innovations
+- **Signing Layer**: ed25519 digital signatures with `receipt_id` generation
+- **Verification Policy**: Schema-versioned policies for different claim types
+- **ProofMail**: Structured data model for delivery and receipt
+- **Independent Verification**: CLI/endpoint that only requires artifact + public key
 
-</details>
+### Claim Types
+- `insurance_risk`: Risk assessment proofs
+- `compliance_control`: Regulatory compliance verification
+- `legal_disclosure`: Legal statement attestation
+- `decision_proof`: Algorithmic decision justification
 
-<details open>
-<summary><strong>June 24, 2026 - 📣 AXLE @ ICML 2026</strong></summary>
+## System Model
 
-We're presenting AXLE at the **3rd AI for Math Workshop** at **ICML 2026** in Seoul, as a contributed talk. Come find our poster and say hi! Read the technical report on [arXiv](https://arxiv.org/abs/2606.26442).
+```
+formal statement? → Lean source / proof candidate → AXLE processing → .axle artifact → 
+Signing Layer → Receipt Binding → Independent Verification
+```
 
-</details>
+## Getting Started
 
-<details>
-<summary><strong>June 3, 2026 - v1.3.0</strong></summary>
+```bash
+# Create a signed artifact
+axle-rs issue claim.json evidence.json --signing-key private.key
 
-Support for all declaration kinds, a reworked `repair_proofs`, link shortening, and broader MCP support. See the [changelog](https://axle.axiommath.ai/v1/docs/changelog/) for details and other changes.
+# Verify an artifact independently
+axle-rs verify --artifact-dir .axle --public-key public.key
 
-### Highlights:
-- **All declaration kinds:** A new `theorems_only` option lets most tools select over **every** declaration kind — definitions, opaques, instances, and more — not just theorems and lemmas. Set it to `false` to opt in.
-- **Reworked `repair_proofs`:** New passes, stacked repairs, and clearer messages for failed repairs.
-- **Tool updates:** Changes and new options for `verify_proof`, `merge`, `extract_decls`, and `sorry2lemma`.
-- **Link shortening:** Short, shareable links to requests.
-- **MCP web support:** The [`axiom-axle-mcp`](https://pypi.org/project/axiom-axle-mcp/) server now works with Claude web, desktop, and mobile.
-
-</details>
-
-<details>
-<summary><strong>April 15, 2026 - v1.2.0</strong></summary>
-
-New `extract_decls` tool for extracting all declaration kinds, and corresponding updates to `extract_theorems`. Users using `extract_theorems` (which will be deprecated in a future update) should migrate to `extract_decls`. See the [changelog](https://axle.axiommath.ai/v1/docs/changelog/) for details.
-
-</details>
-
-<details>
-<summary><strong>April 8, 2026 - v1.1.1</strong></summary>
-
-Default option changes, a Lean version bump, and bug fixes.
-
-### Highlights:
-- **Default options changed:** `autoImplicit` is now set to `true` by default, matching standard Lean behavior.
-- **Lean 4.29.0:** Added the latest stable Lean release.
-- **Timeout bug fix:** Fixed a bug where requests were prematurely preempted. Requests now properly max out at the 15-minute maximum timeout.
-
-See the [changelog](https://axle.axiommath.ai/v1/docs/changelog/) for details and other changes.
-
-</details>
-
-[Past announcements](#past-announcements)
+# Generate a receipt for audit trails
+axle-rs attest claim.json evidence.json --receipt-path receipt.json
+```
 
 ## Documentation
 
-- [Technical report (arXiv)](https://arxiv.org/abs/2606.26442)
-- [Installation Guide](docs/installation.md)
-- [Python API Reference](docs/python-api.md)
-- [CLI Reference](docs/cli-reference.md)
-- [Examples](examples/)
+- [Artifact Format Specification](spec/artifact-format.md)
+- [Verification Policy Guide](spec/verification-policy.md)
+- [Receipt Binding Protocol](spec/receipt-binding.md)
+- [Delivery Channels](spec/delivery-channels.md)
+- [API Reference](docs/api-reference.md)
 
-## Past Announcements
+## Compliance Focus
 
-<details>
-<summary><strong>April 1, 2026 - v1.1.0</strong></summary>
+AXLE-rs is built for organizations that need to:
+- Maintain auditable proof trails for regulatory compliance
+- Provide independent verification to auditors or regulators
+- Generate legally significant artifacts with cryptographic assurance
+- Integrate with existing compliance workflows and systems
+- Meet documentation requirements for insurance claims and legal proceedings
 
-🎉 After mass feedback from the public, we're excited to announce that AXLE is switching from Lean to Rocq. The new name will be **AXRE** (Axiom Rocq Engine). All existing Lean proofs will be automatically translated using GPT-2. 🚀
+## Recent Announcements
 
-### Notable API changes:
-- `document_messages` has been removed from `extract_theorems`. To replicate old behavior, run the `content` field of the resulting documents through the `check` tool.
-- Lean messages now include end positions across all tools, changing the format from `-:4:38: ...` to `-:4:38-4:43: ...`.
+AXLE-rs is now focused on compliance and regulatory applications. The platform provides:
 
-### Performance improvements:
-- Reworked the Lean worker pool for faster responses, no environment warm-up time, and more secure containers.
-- Improved the worker scaling pipeline to decrease delays when all worker slots are busy or offline. In the worst case, users should expect no more than a 2-3 minute delay before more worker capacity spins up.
+- **Independent Verification**: Third-party verification without requiring issuer access
+- **Regulatory Compliance**: Built-in support for insurance, legal, and compliance use cases
+- **Audit Trails**: Cryptographic receipts and signing for immutable audit trails
+- **Pluggable Policies**: Configurable verification policies for different regulatory domains
 
-See the [changelog](https://axle.axiommath.ai/v1/docs/changelog/) for details and other changes.
+The platform is designed to work with existing AXLE infrastructure while providing a new layer for artifact creation, signing, and independent verification.
 
-</details>
+## Technical Report
 
-<details>
-<summary><strong>March 11, 2026 - v1.0.1</strong></summary>
-
-New documentation pages, increased rate limits, and bug fixes. See the [changelog](https://axle.axiommath.ai/v1/docs/changelog/) for details.
-
-</details>
-
-<details>
-<summary><strong>March 6, 2026</strong></summary>
-
-### Lean Zulip Thread
-
-Join the discussion, ask questions, and share feedback on the [Lean Zulip](https://leanprover.zulipchat.com/#narrow/channel/113486-announce/topic/Axiom.20Lean.20Engine/with/577609358).
-
-### Higher Rate Limits
-Rate limits were unintentionally too restrictive:
-
-- API key users: increased to 20 active requests (up from 4)
-- Anonymous users: increased to 10 active requests (up from 1)
-- Max timeout: increased to 15 minutes (up from 5 minutes)
-
-**Users with an API key should regenerate their key to apply the new limits.**
-
-</details>
-
-<details>
-<summary><strong>March 5, 2026 - v1.0.0</strong></summary>
-
-### AXLE Public Release
-We're excited to release AXLE to the public! AXLE provides proof verification and manipulation primitives we've used across all of our research efforts, including training AI models and AxiomProver's 12/12 on Putnam 2025.
-
-[Playground](https://axle.axiommath.ai) | [API docs](https://axle.axiommath.ai/v1/docs/) | [Why we built AXLE](https://axiommath.ai/territory/releasing-axle) | [Request more capacity](https://forms.gle/CdLKu45tEsRXtFQ29) | axle@axiommath.ai
-
-</details>
+For detailed technical information about the AXLE-rs architecture and implementation, see our [technical report](https://arxiv.org/abs/2606.26442).

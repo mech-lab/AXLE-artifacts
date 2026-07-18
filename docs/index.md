@@ -1,85 +1,87 @@
-# AXLE - Axiom Lean Engine
+# Independent Proof Artifact Engine Documentation
 
-## Proof manipulation as infrastructure, not an afterthought
+This documentation covers the AXLE-rs independent proof artifact engine, designed for compliance, insurance, and legal applications.
 
-AXLE is a set of Lean utilities for theorem proving: validating candidate proofs, splitting theorems from larger files, converting proofs to `sorry`, and more. They are written as Lean metaprograms to be robust.
+## Overview
 
-## Features
+AXLE-rs provides a Rust-native platform for creating durable, verifiable proof artifacts that can be independently verified by third parties. The system is designed for regulatory compliance workflows where audit trails, cryptographic assurances, and independent verification are required.
 
-- **Proof Verification**: Validate proofs against formal statements
-- **Code Analysis**: Check Lean code for errors and extract theorems
-- **Code Transformation**: Rename declarations, convert keywords, simplify proofs
+## Key Components
 
-## Usage Methods
+### Artifact Format (.axle)
+Standardized directory structure containing:
+- `manifest.json`: Metadata and schema version
+- `claim.json`: The core claim being attested
+- `evidence.json`: Supporting evidence for the claim
+- `verification_policy.json`: Policy governing how the claim should be verified
+- `hashes.json`: Canonical hashes for content addressing
+- Optional signed components and receipts
 
-AXLE can be accessed through:
+### Signing and Verification
+- **ed25519 signatures** for cryptographic assurance
+- **receipt_id generation** for audit trails
+- **Independent verification** requiring only artifact + public key
+- **Verification policies** for different regulatory domains
 
-1. **Web Interface** - Interactive UI at [https://axle.axiommath.ai/](https://axle.axiommath.ai/)
-2. **Python API** - `pip install axiom-axle` ([Python API Reference](python-api.md))
-3. **CLI** - `axle verify-proof`, `axle check`, etc. ([CLI Reference](cli-reference.md))
-4. **HTTP API** - Direct REST calls with `curl`
+### Claim Types
+- `insurance_risk`: Risk assessment proofs for underwriting and claims
+- `compliance_control`: Regulatory compliance verification (SOX, GDPR, etc.)
+- `legal_disclosure`: Legal statement attestation for contracts and disclosures
+- `decision_proof`: Algorithmic decision justification for AI/ML systems
 
-See the [Quick Start](quickstart.md) tutorial for examples of each method.
+## Getting Started
 
-## Available Tools
+### Installation
+```bash
+# Install the CLI
+cargo install --path crates/axle-cli
 
-| Endpoint | Description |
-|----------|-------------|
-| `verify_proof` | Validate a proof against a formal statement |
-| `check` | Check Lean code for errors |
-| `extract_theorems` | Split file into individual theorems with dependencies |
-| `extract_decls` | Split file into individual declarations with dependencies |
-| `rename` | Rename declarations |
-| `theorem2lemma` | Convert between `theorem` and `lemma` keywords |
-| `theorem2sorry` | Strip proofs from theorems |
-| `merge` | Combine multiple Lean files |
-| `simplify_theorems` | Simplify theorem proofs |
-| `repair_proofs` | Attempt to repair broken proofs |
-| `have2lemma` | Extract `have` statements to standalone lemmas |
-| `have2sorry` | Replace `have` statements with `sorry` |
-| `sorry2lemma` | Extract `sorry` and errors to standalone lemmas |
-| `disprove` | Attempt to disprove theorems |
-| `normalize` | Standardize Lean formatting |
+# Or build from source
+cargo build --release
+```
 
-See tools documentation for detailed parameters and response fields.
+### Basic Usage
 
-## Links
+Create a signed artifact:
+```bash
+axle-rs issue claim.json evidence.json --signing-key private.key
+```
 
-- [Technical report (arXiv)](https://arxiv.org/abs/2606.26442)
-- [Installation Guide](installation.md)
-- [Quick Start Tutorial](quickstart.md)
-- [Python API Reference](python-api.md)
+Verify an artifact independently:
+```bash
+axle-rs verify --artifact-dir .axle --public-key public.key
+```
+
+Generate a receipt for audit trails:
+```bash
+axle-rs attest claim.json evidence.json --receipt-path receipt.json
+```
+
+## Documentation
+
+- [Artifact Format](artifact-format.md)
+- [Verification Policies](verification-policy.md)
+- [Receipt Binding](receipt-binding.md)
+- [Delivery Channels](delivery-channels.md)
 - [CLI Reference](cli-reference.md)
-- [Configuration](configuration.md)
-- [Troubleshooting](troubleshooting.md)
+- [API Reference](api-reference.md)
 
-## Public Deployments
+## Compliance Focus
 
-AXLE's public deployment follows a weekly release schedule:
+AXLE-rs is built for organizations that need to:
+- Maintain auditable proof trails for regulatory compliance
+- Provide independent verification to auditors or regulators
+- Generate legally significant artifacts with cryptographic assurance
+- Integrate with existing compliance workflows and systems
+- Meet documentation requirements for insurance claims and legal proceedings
 
-- **Maintenance Window**: Every Wednesday at 10:00 AM Pacific Time
-- **Expected Downtime**: Brief interruption (typically under 5 minutes) during restart
-- **Updates**: New features, bug fixes, and improvements deployed weekly
+## Tools Reference
 
-After each deployment, the [changelog](https://github.com/AxiomMath/axiom-lean-engine/blob/main/CHANGELOG.md) is updated with details on what changed.
+While AXLE-rs focuses on artifact creation and verification, the underlying AXLE tools remain available for proof processing:
 
-## Submitting Issues
+- `check`: Validate Lean code for errors
+- `verify_proof`: Validate proofs against formal statements
+- `extract_decls`: Extract declarations with dependencies
+- And other proof manipulation tools
 
-If you encounter bugs, unexpected behavior, or have feature requests:
-
-<a href="https://github.com/AxiomMath/axiom-lean-engine/issues/new?title=Bug%20report%3A%20AXLE&body=%23%23%23%20Bug%20Description%0A%3C%21--%20Please%20describe%20the%20issue%20you%20encountered%20--%3E%0A%0A%0A%0A%23%23%23%20Expected%20Behavior%0A%3C%21--%20What%20did%20you%20expect%20to%20happen%3F%20--%3E%0A%0A%0A%0A%23%23%23%20Actual%20Behavior%0A%3C%21--%20What%20actually%20happened%3F%20--%3E%0A%0A%0A%0A%23%23%23%20Reproduction%20Details%0A-%20%2A%2ATool%3A%2A%2A%20%0A-%20%2A%2AEnvironment%3A%2A%2A%20%0A-%20%2A%2ALink%3A%2A%2A%20%0A%0A%23%23%23%20Additional%20Context%0A%3C%21--%20Add%20any%20other%20context%20about%20the%20problem%20here%20--%3E%0A" target="_blank" class="file-bug-btn">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-  </svg>
-  FILE A BUG
-</a>
-
-## Resources
-
-- [Axiom Homepage](https://axiommath.ai/)
-- [Lean Homepage](https://lean-lang.org/)
-- [Mathlib](https://leanprover-community.github.io) - Mathematics library for Lean 4
-- [Lean Zulip](https://leanprover.zulipchat.com/) - Community discussion
-- [AXLE on Zulip](https://leanprover.zulipchat.com/#narrow/channel/219941-Machine-Learning-for-Theorem-Proving/topic/Axiom.20Lean.20Engine/with/577859288) - Discussion thread for AXLE
-- [axiom-axle-mcp](https://pypi.org/project/axiom-axle-mcp/) - MCP server for AXLE
-- [Pantograph](https://github.com/lenianiva/Pantograph) - Machine-to-machine interaction interface for Lean
+These tools can be used to generate the inputs for AXLE-rs artifact creation.

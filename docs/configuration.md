@@ -1,158 +1,181 @@
 # Configuration
 
-AXLE can be configured via environment variables or constructor arguments.
-
-## Authentication
-
-AXLE uses API key authentication for active request rate limiting. Requests without an API key are limited to 10 concurrent active requests.
-
-To obtain an API key, visit [axle.axiommath.ai/app/console](https://axle.axiommath.ai/app/console). If you need higher rate limits, you can [request more capacity](https://forms.gle/CdLKu45tEsRXtFQ29).
-
-### Setting Your API Key
-
-The recommended way to configure your API key is via the `AXLE_API_KEY` environment variable:
-
-```bash
-export AXLE_API_KEY=your-api-key
-```
-
-You can also pass it directly when creating the client (see [Python Configuration](#python-configuration) below).
-
+AXLE-rs can be configured via environment variables, configuration files, or command-line arguments. This document covers the configuration options for the independent proof artifact engine.
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AXLE_API_KEY` | — | API key for authentication |
-| `AXLE_API_URL` | `https://axle.axiommath.ai` | API server URL |
-| `AXLE_TIMEOUT_SECONDS` | `1_800` | Base timeout in seconds for retry window if service is temporarily unavailable |
-| `AXLE_MAX_CONCURRENCY` | `20` | Max concurrent requests |
+| `AXLE_RS_HOME` | `~/.axle-rs` | Base directory for AXLE-rs data |
+| `AXLE_RS_KEY_DIR` | `~/.axle-rs/keys` | Directory for signing keys |
+| `AXLE_RS_POLICY_DIR` | `~/.axle-rs/policies` | Directory for verification policies |
+| `AXLE_RS_LOG_LEVEL` | `info` | Logging level (debug, info, warn, error) |
+| `AXLE_RS_API_URL` | `http://localhost:8080` | API server URL for remote operations |
+| `AXLE_RS_TIMEOUT_SECONDS` | `30` | Request timeout in seconds |
+| `AXLE_RS_MAX_CONCURRENCY` | `4` | Max concurrent operations |
 
 ### Example
 
 ```bash
-export AXLE_API_KEY=your-api-key
-export AXLE_API_URL=https://axle.axiommath.ai
-export AXLE_TIMEOUT_SECONDS=600
-export AXLE_MAX_CONCURRENCY=50
+export AXLE_RS_HOME=/var/lib/axle-rs
+export AXLE_RS_KEY_DIR=/etc/axle-rs/keys
+export AXLE_RS_POLICY_DIR=/etc/axle-rs/policies
+export AXLE_RS_LOG_LEVEL=debug
+export AXLE_RS_API_URL=https://api.axle-rs.example.com
+export AXLE_RS_TIMEOUT_SECONDS=60
+export AXLE_RS_MAX_CONCURRENCY=8
 ```
 
-## Python Configuration
+## Configuration File
 
-### Constructor Arguments
+AXLE-rs supports a TOML configuration file at `$AXLE_RS_HOME/config.toml`:
 
-```python
-from axle import AxleClient
+```toml
+[general]
+home = "/var/lib/axle-rs"
+log_level = "info"
 
-# API key from environment variable (recommended)
-client = AxleClient()
+[keys]
+directory = "/etc/axle-rs/keys"
+default_key = "underwriter.key"
 
-# Explicit API key
-client = AxleClient(api_key="your-api-key")
+[policies]
+directory = "/etc/axle-rs/policies"
+default_policy = "insurance_risk_v1.json"
 
-# Custom URL, timeout, and concurrency
-client = AxleClient(
-    api_key="your-api-key",
-    url=AxleClient.DEFAULT_URL,
-    base_timeout_seconds=600,
-    max_concurrency=50,
-)
+[api]
+url = "https://api.axle-rs.example.com"
+timeout_seconds = 60
+max_concurrency = 8
+
+[verification]
+strict = false
+require_receipt = true
 ```
-
-All constructor arguments fall back to environment variables if not provided.
 
 ## CLI Configuration
 
-The CLI reads the `AXLE_API_KEY` environment variable automatically. Set it before running CLI commands:
-
-```bash
-export AXLE_API_KEY=your-api-key
-```
+The CLI reads configuration from:
+1. Command-line arguments (highest priority)
+2. Environment variables
+3. Configuration file
+4. Built-in defaults (lowest priority)
 
 ### Global Options
 
 ```bash
-# Custom API URL
-axle --url https://axle.axiommath.ai check file.lean --environment lean-4.28.0
+# Custom configuration file
+axle-rs --config /path/to/config.toml issue claim.json evidence.json
 
-# JSON output
-axle --json check file.lean --environment lean-4.28.0
+# Custom log level
+axle-rs --log-level debug verify --artifact-dir .axle --public-key public.key
 
-# Output to file
-axle theorem2sorry input.lean --environment lean-4.28.0 -o output.lean
+# Custom home directory
+axle-rs --home /var/lib/axle-rs issue claim.json evidence.json
 ```
 
+## Signing Keys
 
-## Lean Environments
-
-AXLE supports multiple Lean environments, each containing a specific Lean version and set of dependencies (e.g., Mathlib). Every API request requires an `environment` parameter specifying which environment to use. To get started, we recommend using the latest Lean + Mathlib version, which at the time of writing is packaged in `lean-4.28.0`.
-
-### Discovering Available Environments
-
-You can query the available environments using any access method:
-
-#### Python
-
-```python
-import asyncio
-from axle import AxleClient
-
-async def main():
-    async with AxleClient() as client:
-        environments = await client.environments()
-        for env in environments:
-            print(f"{env.name}: {env.description}")
-
-asyncio.run(main())
-```
-
-#### CLI
+### Key Generation
 
 ```bash
-axle environments
+# Generate a new ed25519 key pair
+axle-rs key generate --output private.key --public-key public.key
+
+# Generate with a specific name
+axle-rs key generate --name underwriter --output /etc/axle-rs/keys/
 ```
 
-#### HTTP API
+### Key Management
 
 ```bash
-curl -s -H "Authorization: Bearer $AXLE_API_KEY" https://axle.axiommath.ai/v1/environments | jq
+# List available keys
+axle-rs key list
+
+# Show key information
+axle-rs key show --name underwriter
+
+# Import an existing key
+axle-rs key import --path /path/to/private.key --name imported_key
 ```
 
-The `Authorization` header is required on deployments with `api_allow_anonymous=false`; on permissive deployments it is silently accepted.
+## Verification Policies
 
-### Environment Response Format
+### Policy Registration
 
-Each environment includes the following fields:
+```bash
+# Register a verification policy
+axle-rs policy register --path insurance_risk_v1.json --name insurance_risk_v1
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | `str` | Environment identifier to use in requests (e.g., `"lean-4.28.0"`) |
-| `lean_toolchain` | `str` | Lean toolchain version (e.g., `"leanprover/lean4:v4.26.0"`) |
-| `repo_url` | `str | null` | Git repository URL for custom environments |
-| `revision` | `str | null` | Git revision/commit hash for custom environments |
-| `subdir` | `str | null` | Subdirectory within the repository |
-| `imports` | `str` | Default imports available (e.g., `"import Mathlib"`) |
-| `description` | `str` | Human-readable description |
+# List registered policies
+axle-rs policy list
 
-### Example Environments
-
-```json
-[
-  {
-    "name": "lean-4.21.0",
-    "lean_toolchain": "leanprover/lean4:v4.21.0",
-    "imports": "import Mathlib",
-    "description": "Lean 4.21.0 with Mathlib"
-  },
-  {
-    "name": "pnt-4.26.0",
-    "lean_toolchain": "leanprover/lean4:v4.26.0",
-    "repo_url": "https://github.com/AlexKontorovich/PrimeNumberTheoremAnd",
-    "revision": "d24e98e2384cd191486517bfca980576772f6c17",
-    "imports": "import Mathlib\nimport PrimeNumberTheoremAnd",
-    "description": "Lean + Mathlib version 4.26.0 with Terence Tao's Prime Number Theorem Project"
-  }
-]
+# Show policy details
+axle-rs policy show --name insurance_risk_v1
 ```
 
-See [Import Mismatches](troubleshooting.md#import-mismatches) for important notes on how AXLE handles import statements.
+### Policy Configuration
+
+Policies can be configured via:
+- Local file path
+- Base64-encoded JSON
+- Pre-registered policy name
+
+## Compliance Configuration
+
+### Audit Trail Settings
+
+```toml
+[audit]
+enabled = true
+receipt_dir = "/var/lib/axle-rs/receipts"
+retention_days = 365
+```
+
+### Regulatory Compliance
+
+```toml
+[compliance]
+jurisdiction = "US"
+regulatory_framework = "SOX"
+require_independent_verification = true
+```
+
+## Integration
+
+### CI/CD Integration
+
+```yaml
+# Example GitHub Actions workflow
+- name: Verify Compliance Artifact
+  run: |
+    axle-rs verify --artifact-dir .axle --public-key ${{ secrets.AXLE_RS_PUBLIC_KEY }}
+```
+
+### API Integration
+
+```bash
+# Set API URL for remote operations
+export AXLE_RS_API_URL=https://api.axle-rs.example.com
+
+# Use API for artifact creation
+axle-rs issue claim.json evidence.json --api
+```
+
+## Security
+
+### Key Security
+
+- Private keys should be stored securely (e.g., HSM, encrypted storage)
+- Public keys can be distributed freely
+- Key rotation should be performed regularly
+
+### Policy Security
+
+- Policies should be versioned and immutable
+- Policy changes should be audited
+- Policy validation should be strict
+
+## Troubleshooting
+
+See [Troubleshooting](troubleshooting.md) for common configuration issues.

@@ -1,0 +1,9 @@
+{
+  "schema": "axle.evidence.v0",
+  "payload_hash": "sha256:abc123...",
+  "attachment_hashes": ["sha256:def456..."],
+  "metadata": {
+    "source": "internal-db",
+    "confidence": 0.95
+  }
+}

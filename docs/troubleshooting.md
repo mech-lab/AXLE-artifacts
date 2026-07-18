@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues when working with AXLE and how to resolve them.
+Common issues when working with AXLE-rs and how to resolve them.
 
 ## Reading Error Messages
 
@@ -10,19 +10,20 @@ When a request fails entirely, the response includes an error type at the top le
 
 | Error Type | Meaning | Action |
 |------------|---------|--------|
-| `user_error` | Invalid request (missing parameters, bad arguments, import mismatch) | Fix the request—check your inputs |
-| `internal_error` | Server bug | [Report it](https://github.com/AxiomMath/axiom-lean-engine/issues) |
+| `user_error` | Invalid request (missing parameters, bad arguments) | Fix the request—check your inputs |
+| `internal_error` | Server bug | [Report it](https://github.com/AxiomMath/axle-rs/issues) |
 | `error` | Runtime failure (timeout, OOM, executor crash) | Retry or simplify input |
 
-In the Python client, these map to exceptions: `AxleInvalidArgument`, `AxleInternalError`, and `AxleRuntimeError`. See [Error Handling](python-api.md#error-handling) for details on catching and handling these exceptions, and for an exhaustive list of all AXLE exceptions, including networking errors.
+In the CLI, these map to exit codes: `1` (general error), `2` (file exists), `3` (validation failed).
 
 ### Non-Fatal Errors
-When troubleshooting, start by examining the messages in the response. AXLE responses include two message fields, each containing `errors`, `warnings`, and `infos` arrays:
+
+When troubleshooting, start by examining the messages in the response. AXLE-rs responses include two message fields, each containing `errors`, `warnings`, and `infos` arrays:
 
 | Field | Contents |
 |-------|----------|
-| `lean_messages` | Output from the Lean compiler itself; an empty `errors` list means the code compiles |
-| `tool_messages` | AXLE-specific logs and validation results |
+| `artifact_messages` | Output from the artifact engine itself; an empty `errors` list means the artifact is valid |
+| `verification_messages` | AXLE-rs-specific logs and validation results |
 
 **Message severity:**
 
@@ -30,60 +31,59 @@ When troubleshooting, start by examining the messages in the response. AXLE resp
 - **warnings** — Something is suspicious but not fatal
 - **infos** — Informational output (timing, debug info, etc.)
 
-For most tools, `tool_messages.errors` is empty; fatal issues are raised at the response level (see above). The exceptions are `verify_proof`, which uses `tool_messages.errors` to report strict proof verification failures, and `repair_proofs`, which uses it to report failed repairs.
+For most commands, `verification_messages.errors` is empty; fatal issues are raised at the response level (see above). The exceptions are `verify`, which uses `verification_messages.errors` to report strict verification failures, and `attest`, which uses it to report failed attestations.
 
 ## Common Issues
 
 ### Tool Not Working As Expected
 
-**Symptom:** A tool returns unexpected results, fails to transform code correctly, or produces output with errors.
+**Symptom:** A command returns unexpected results, fails to create an artifact, or produces output with errors.
 
-**Cause:** AXLE was built to handle certain categories of errors—particularly those restricted to the proof body (e.g., failed tactics, `sorry`). Errors outside the proof body (malformed declarations, syntax errors, unresolved imports) may cause tools to behave unexpectedly.
+**Cause:** AXLE-rs was built to handle certain categories of errors—particularly those restricted to the artifact body (e.g., missing fields, invalid signatures). Errors outside the artifact body (malformed JSON, syntax errors, unresolved references) may cause commands to behave unexpectedly.
 
-**What AXLE handles well:**
+**What AXLE-rs handles well:**
 
-- Code that compiles cleanly
-- Proofs with localized errors (e.g., a tactic that doesn't close the goal)
+- Artifacts that compile cleanly
+- Claims with localized errors (e.g., a missing field, invalid signature)
 
 **What may cause issues:**
 
-- Syntax errors or malformed declarations
-- Unresolved identifiers outside proof bodies
-- Unsupported constructs (see [Unsupported Constructs](#unsupported-lean-constructs))
+- Syntax errors or malformed JSON
+- Unresolved identifiers outside artifact bodies
+- Unsupported constructs (see [Unsupported Constructs](#unsupported-axle-rs-constructs))
 
-**Rule of thumb:** If the input compiles, the output should compile. For best results, use AXLE with code that already compiles.
+**Rule of thumb:** If the input is valid JSON, the output should be valid. For best results, use AXLE-rs with inputs that already validate.
 
-```python
-result = await axle.rename(content=code, declarations={"old": "new"}, environment="lean-4.28.0")
+```bash
+# Check artifact validity
+axle-rs verify --artifact-dir .axle --public-key public.key
 
-if result.lean_messages.errors:
-    print("Output has compilation errors:")
-    for msg in result.lean_messages.errors:
-        print(f"  {msg}")
-else:
-    print(result.content)
+if [ $? -eq 0 ]; then
+    echo "Artifact is valid"
+else
+    echo "Artifact has errors"
+fi
 ```
-
 
 ### Import Mismatches
 
-**Symptom:** Your code's imports don't match the environment's default header, and you get an info/warning message or unexpectedly slow (or incorrect) results.
+**Symptom:** Your artifact's imports don't match the environment's default header, and you get an info/warning message or unexpectedly slow (or incorrect) results.
 
-**Cause:** Every environment has a default header derived from its `imports` field. AXLE keeps a pre-built environment for that header so requests run fast. When your code's imports differ from it, AXLE's behavior depends on the `ignore_imports` flag.
+**Cause:** Every environment has a default header derived from its `imports` field. AXLE-rs keeps a pre-built environment for that header so requests run fast. When your code's imports differ from it, AXLE-rs's behavior depends on the `ignore_imports` flag.
 
 **Behavior:**
 
-- **`ignore_imports=True` (default):** AXLE ignores the imports in your `content` and substitutes the environment's default header. This reuses the cached environment, so it is fast. The substituted code is returned in the `content` field, and an info message notes the override.
+- **`ignore_imports=True` (default):** AXLE-rs ignores the imports in your `content` and substitutes the environment's default header. This reuses the cached environment, so it is fast. The substituted code is returned in the `content` field, and an info message notes the override.
 
-- **`ignore_imports=False`:** AXLE processes your imports exactly as written. This is *significantly slower* because the cached environment cannot be reused, and it may produce **inconsistent or incorrect results** if a required dependency (such as `Mathlib.Tactic`) is missing. AXLE returns a warning in these cases.
+- **`ignore_imports=False`:** AXLE-rs processes your imports exactly as written. This is *significantly slower* because the cached environment cannot be reused, and it may produce **inconsistent or incorrect results** if a required dependency (such as `Mathlib.Tactic`) is missing. AXLE-rs returns a warning in these cases.
 
 **Recommendation:** Leave `ignore_imports` at its default (`True`) unless you specifically need custom imports. To discover the expected imports for an environment, query the [environments endpoint](configuration.md#discovering-available-environments).
 
-### Unsupported Lean Constructs
+### Unsupported AXLE-rs Constructs
 
-**Symptom:** Unexpected behavior or errors with certain Lean code patterns.
+**Symptom:** Unexpected behavior or errors with certain AXLE-rs code patterns.
 
-**Cause:** AXLE was designed with simple imports, theorems, and definitions in mind.
+**Cause:** AXLE-rs was designed with simple imports, theorems, and definitions in mind.
 
 **Potentially unsupported constructs:**
 

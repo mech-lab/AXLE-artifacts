@@ -8,6 +8,8 @@ pub const DEFAULT_MANIFEST_FILE: &str = "manifest.json";
 pub const DEFAULT_SOURCE_FILE: &str = "source.json";
 pub const DEFAULT_DECLARATIONS_FILE: &str = "declarations.json";
 pub const DEFAULT_DIAGNOSTICS_FILE: &str = "diagnostics.json";
+pub const DEFAULT_CLAIM_FILE: &str = "claim.json";
+pub const DEFAULT_EVIDENCE_FILE: &str = "evidence.json";
 pub const DEFAULT_HASHES_FILE: &str = "hashes.json";
 pub const DEFAULT_VERIFICATION_FILE: &str = "verification.json";
 pub const DEFAULT_ADAPTER_FILE: &str = "adapter.json";
@@ -128,8 +130,8 @@ impl Default for ObjectPaths {
     fn default() -> Self {
         Self {
             source: DEFAULT_SOURCE_FILE.to_owned(),
-            declarations: DEFAULT_DECLARATIONS_FILE.to_owned(),
-            diagnostics: DEFAULT_DIAGNOSTICS_FILE.to_owned(),
+            declarations: DEFAULT_CLAIM_FILE.to_owned(),
+            diagnostics: DEFAULT_EVIDENCE_FILE.to_owned(),
             hashes: DEFAULT_HASHES_FILE.to_owned(),
             verification: None,
             adapter: None,

@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-pub mod flight_recorder;
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AxleReceipt {
     pub schema: String,
